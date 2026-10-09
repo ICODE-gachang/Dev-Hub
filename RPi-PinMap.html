@@ -231,7 +231,6 @@
             box-shadow: 0 0 6px rgba(255,255,255,0.6);
         }
 
-        /* 브레드보드 스타일 */
         .breadboard-card {
             transition: outline 0.2s, box-shadow 0.2s;
         }
@@ -421,24 +420,17 @@
     </style>
 </head>
 <body>
-    <!-- 🟢 로그인 모달 UI (추가) -->
     <div id="login-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:99999;">
         <div style="background:#ffffff; padding:30px; border-radius:12px; text-align:center; max-width:320px; width:90%; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
             <h3 style="margin-top:0; color:#333;">🔒 로그인</h3>
             <p style="font-size:14px; color:#666; margin-bottom:15px;">허가된 이메일과 비밀번호를 입력하세요.</p>
-            
-            <!-- autocomplete="off" 추가 -->
             <input type="email" id="login-email" placeholder="이메일" autocomplete="off" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
-            
-            <!-- autocomplete="new-password" 추가 -->
             <input type="password" id="login-password" placeholder="비밀번호" autocomplete="new-password" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
-            
             <button onclick="login()" style="width:100%; padding:10px; background:#007bff; color:white; border:none; border-radius:6px; font-size:16px; cursor:pointer;">로그인</button>
             <p id="login-error" style="color:red; font-size:13px; display:none; margin-top:10px; margin-bottom:0;"></p>
         </div>
     </div>
 
-    <!-- 기존 본문 영역... -->
 <div id="selectGuideBanner">
     <span>🎯 브레드보드에서 연결할 구멍(좌표)을 직접 클릭하세요!</span>
     <button class="btn btn-secondary" onclick="cancelBreadboardSelection()" style="padding:4px 10px; font-size:12px; background:rgba(255,255,255,0.25); border:1px solid white; color:white;">취소</button>
@@ -479,7 +471,6 @@
 
         <div class="main-content">
             <div class="interactive-grid">
-                <!-- 좌측 영역: GPIO 핀 레이아웃 -->
                 <div class="pinout-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <h3>GPIO 40-Pin</h3>
@@ -493,14 +484,12 @@
                     <div class="header-box" id="gpioHeader"></div>
                 </div>
 
-                <!-- 우측 영역: 브레드보드(선택적) + 요약 표 -->
                 <div class="right-pane">
-                    <!-- 브레드보드 패널 (기본 숨김) -->
                     <div class="breadboard-card" id="breadboardCard" style="display: none;">
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                             <h3>실시간 브레드보드 (Visual Breadboard)</h3>
                             <span style="font-size: 12px; color: var(--rpi-green); font-weight: bold;">
-                                원하는 구멍을 직접 클릭하여 선택
+                                원하는 구멍을 직접 클릭하여 핀 설정
                             </span>
                         </div>
                         <div class="breadboard-wrapper">
@@ -508,7 +497,6 @@
                         </div>
                     </div>
 
-                    <!-- 요약 표 패널 -->
                     <div class="summary-card">
                         <h3>연결 목록 요약</h3>
                         <table class="summary-tbl">
@@ -530,7 +518,6 @@
     </div>
 </div>
 
-<!-- New Project Modal -->
 <div class="modal" id="newProjectModal">
     <div class="modal-content">
         <h3>새 프로젝트 만들기</h3>
@@ -557,10 +544,14 @@
     </div>
 </div>
 
-<!-- Pin Setting Modal -->
+<!-- Pin Setting Modal (개선됨: GPIO 핀 선택 드롭다운 추가) -->
 <div class="modal" id="pinModal">
     <div class="modal-content">
         <h4 id="pinModalTitle">핀 설정</h4>
+        <div>
+            <label>라즈베리파이 핀 (GPIO):</label>
+            <select id="pinSelectDropdown" onchange="onPinDropdownChange(this.value)"></select>
+        </div>
         <div>
             <label>점퍼 와이어 색상:</label>
             <div class="color-picker" id="colorPicker"></div>
@@ -590,20 +581,16 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // 1. Firebase 앱 및 데이터베이스/인증 객체 초기화 (1회만 실행)
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
     const auth = getAuth(app);
 
-    // 💡 브라우저 창/탭을 닫으면 로그인이 풀리도록 세션 유지 설정
-    setPersistence(auth, browserSessionPersistence)
-        .catch((error) => {
-            console.error("Persistence 설정 오류:", error);
-        });
+    setPersistence(auth, browserSessionPersistence).catch((error) => {
+        console.error("Persistence 설정 오류:", error);
+    });
 
     const projectsRef = ref(db, 'pinmap_projects');
 
-    // 2. 로그인 상태 감지 (로그인 완료 시 모달 숨김)
     onAuthStateChanged(auth, (user) => {
         if (user) {
             document.getElementById('login-modal').style.display = 'none';
@@ -612,23 +599,19 @@
         }
     });
 
-    // 3. 로그인 처리 함수
     window.login = function() {
         const email = document.getElementById('login-email').value;
         const password = document.getElementById('login-password').value;
         const errorMsg = document.getElementById('login-error');
 
         signInWithEmailAndPassword(auth, email, password)
-            .then(() => {
-                errorMsg.style.display = 'none';
-            })
+            .then(() => { errorMsg.style.display = 'none'; })
             .catch((error) => {
                 errorMsg.innerText = "로그인 실패: " + error.message;
                 errorMsg.style.display = 'block';
             });
     };
 
-    // --- 이하 RPi PinMap 로직 ---
     const pinDefinitions = [
         { num: 1, name: "3V3 power" },      { num: 2, name: "5V power" },
         { num: 3, name: "GPIO 2 (SDA)" },   { num: 4, name: "5V power" },
@@ -702,7 +685,6 @@
         }
     }
 
-    /* 브레드보드 표시/숨기기 토글 */
     function toggleBreadboardView(forceShow = null) {
         if (forceShow !== null) {
             isBreadboardVisible = forceShow;
@@ -725,7 +707,6 @@
         }
     }
 
-    /* 좌표 선택 모드 시작 */
     function startBreadboardSelection() {
         if (!isBreadboardVisible) {
             toggleBreadboardView(true);
@@ -743,7 +724,6 @@
         bbCard.style.boxShadow = '0 0 15px rgba(44, 140, 74, 0.5)';
     }
 
-    /* 좌표 선택 취소 */
     function cancelBreadboardSelection() {
         isSelectingBreadboardHole = false;
         document.getElementById('selectGuideBanner').style.display = 'none';
@@ -755,7 +735,7 @@
         document.getElementById('pinModal').style.display = 'flex';
     }
 
-    /* 브레드보드 구멍 클릭 핸들러 */
+    /* 🟢 브레드보드 구멍 클릭 핸들러 (개선됨) */
     function onBreadboardHoleClick(posKey) {
         if (isSelectingBreadboardHole) {
             document.getElementById('pinBreadboardInput').value = posKey;
@@ -778,7 +758,37 @@
                 input.style.borderColor = '';
             }, 600);
         } else {
-            alert(`선택한 위치: [${posKey}]\nGPIO 핀을 클릭한 후 '🎯 좌표 선택' 버튼을 누르면 이 구멍을 해당 핀에 입력할 수 있습니다.`);
+            // 브레드보드 구멍을 그냥 직접 클릭한 경우 모달 열기
+            openBreadboardHoleModal(posKey);
+        }
+    }
+
+    /* 🟢 브레드보드 직접 클릭 시 핀 설정 모달 호출 */
+    function openBreadboardHoleModal(posKey) {
+        const currentPins = (projects[currentProjectId] && projects[currentProjectId].pins) || {};
+        const upperPos = posKey.toUpperCase().trim();
+
+        // 1. 이미 해당 좌표에 연결되어 있는 핀이 있는지 탐색
+        let existingPinNum = null;
+        Object.keys(currentPins).forEach(pinNum => {
+            if (currentPins[pinNum].breadboard && currentPins[pinNum].breadboard.toUpperCase().trim() === upperPos) {
+                existingPinNum = Number(pinNum);
+            }
+        });
+
+        if (existingPinNum) {
+            // 이미 매핑된 핀이 있으면 해당 핀 모달 열기
+            openPinModal(existingPinNum);
+        } else {
+            // 아직 연결되지 않은 구멍이면, 아직 사용 안 한 첫 번째 핀을 기본 선택으로 할당
+            let defaultPin = 1;
+            for (let i = 1; i <= 40; i++) {
+                if (!currentPins[i]) {
+                    defaultPin = i;
+                    break;
+                }
+            }
+            openPinModal(defaultPin, posKey);
         }
     }
 
@@ -927,7 +937,6 @@
         }
     }
 
-    /* 브레드보드 실시간 렌더링 */
     function renderVisualBreadboard() {
         const table = document.getElementById('visualBreadboardTable');
         table.innerHTML = '';
@@ -1022,14 +1031,43 @@
         });
     }
 
-    function openPinModal(pinNum) {
-        selectedPinNum = pinNum;
-        const pinDef = pinDefinitions.find(p => p.num === pinNum);
-        const existingData = projects[currentProjectId].pins ? projects[currentProjectId].pins[pinNum] : null;
+    /* 🟢 모달 드롭다운 목록 생성 */
+    function populatePinDropdown() {
+        const select = document.getElementById('pinSelectDropdown');
+        if (!select) return;
+        select.innerHTML = '';
+        pinDefinitions.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.num;
+            opt.innerText = `Pin ${p.num} - ${p.name}`;
+            select.appendChild(opt);
+        });
+    }
 
-        document.getElementById('pinModalTitle').innerText = `Pin ${pinNum} (${pinDef.name}) 설정`;
+    /* 🟢 모달 내에서 핀 선택 변경 시 처리 */
+    function onPinDropdownChange(newPinNum) {
+        const currentBbPos = document.getElementById('pinBreadboardInput').value;
+        openPinModal(Number(newPinNum), currentBbPos);
+    }
+
+    /* 🟢 Pin 설정 모달 열기 (개선됨) */
+    function openPinModal(pinNum, overrideBreadboardPos = null) {
+        selectedPinNum = Number(pinNum);
+        populatePinDropdown();
+        
+        document.getElementById('pinSelectDropdown').value = selectedPinNum;
+
+        const pinDef = pinDefinitions.find(p => p.num === selectedPinNum);
+        const existingData = (projects[currentProjectId].pins) ? projects[currentProjectId].pins[selectedPinNum] : null;
+
+        document.getElementById('pinModalTitle').innerText = `Pin ${selectedPinNum} (${pinDef.name}) 설정`;
         document.getElementById('pinLabelInput').value = existingData ? existingData.label : '';
-        document.getElementById('pinBreadboardInput').value = existingData ? (existingData.breadboard || '') : '';
+
+        if (overrideBreadboardPos !== null) {
+            document.getElementById('pinBreadboardInput').value = overrideBreadboardPos;
+        } else {
+            document.getElementById('pinBreadboardInput').value = existingData ? (existingData.breadboard || '') : '';
+        }
         
         selectedColorHex = existingData ? existingData.color : availableColors[0].hex;
         renderColorPicker();
@@ -1038,6 +1076,7 @@
     }
 
     function savePinData() {
+        const pinNum = Number(document.getElementById('pinSelectDropdown').value);
         const label = document.getElementById('pinLabelInput').value.trim();
         const breadboard = document.getElementById('pinBreadboardInput').value.trim();
         
@@ -1046,7 +1085,7 @@
         }
 
         if (label || breadboard || selectedColorHex) {
-            projects[currentProjectId].pins[selectedPinNum] = {
+            projects[currentProjectId].pins[pinNum] = {
                 color: selectedColorHex,
                 breadboard: breadboard || '미지정',
                 label: label || '연결됨'
@@ -1064,8 +1103,9 @@
     }
 
     function clearPinData() {
-        if (projects[currentProjectId].pins && projects[currentProjectId].pins[selectedPinNum]) {
-            delete projects[currentProjectId].pins[selectedPinNum];
+        const pinNum = Number(document.getElementById('pinSelectDropdown').value);
+        if (projects[currentProjectId].pins && projects[currentProjectId].pins[pinNum]) {
+            delete projects[currentProjectId].pins[pinNum];
             projects[currentProjectId].date = getCurrentDateTime();
             saveToFirebase();
         }
@@ -1151,7 +1191,6 @@
         event.target.value = '';
     }
 
-    // HTML 버튼 이벤트를 위한 window 전역 등록
     window.showHome = showHome;
     window.openNewProjectModal = openNewProjectModal;
     window.saveNewProject = saveNewProject;
@@ -1168,6 +1207,10 @@
     window.toggleBreadboardView = toggleBreadboardView;
     window.startBreadboardSelection = startBreadboardSelection;
     window.cancelBreadboardSelection = cancelBreadboardSelection;
+    window.onPinDropdownChange = onPinDropdownChange;
+    window.openBreadboardHoleModal = openBreadboardHoleModal;
 
     renderColorPicker();
 </script>
+</body>
+</html>
