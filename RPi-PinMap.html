@@ -549,19 +549,16 @@
     <div class="modal-content">
         <h4 id="pinModalTitle">설정</h4>
         
-        <!-- 40핀 전용 그룹 (브레드보드 단독 모드에서는 숨겨짐) -->
         <div id="pinGpioGroup">
             <label>라즈베리파이 핀 (GPIO):</label>
             <select id="pinSelectDropdown" onchange="onPinDropdownChange(this.value)"></select>
         </div>
 
-        <!-- 공통: 점퍼 와이어 색상 -->
         <div id="colorPickerGroup">
             <label>점퍼 와이어 색상:</label>
             <div class="color-picker" id="colorPicker"></div>
         </div>
 
-        <!-- 40핀 전용 그룹 (브레드보드 단독 모드에서는 숨겨짐) -->
         <div id="pinBreadboardGroup">
             <label>브레드보드 위치 (좌표):</label>
             <div style="display:flex; gap:6px;">
@@ -570,7 +567,6 @@
             </div>
         </div>
 
-        <!-- 공통: 연결 장치 / 신호 라벨 -->
         <div id="labelInputGroup">
             <label>연결 장치 / 신호 라벨:</label>
             <input type="text" id="pinLabelInput" placeholder="예: DHT11 Data, LED (+), 220Ω 저항">
@@ -661,7 +657,7 @@
     let currentProjectId = null;
     let selectedPinNum = null;
     let selectedBbPos = null;
-    let modalMode = 'gpio'; // 'gpio' | 'bb'
+    let modalMode = 'gpio';
     let selectedColorHex = availableColors[0].hex;
     let isBreadboardVisible = false;
     let isSelectingBreadboardHole = false;
@@ -746,10 +742,8 @@
         document.getElementById('pinModal').style.display = 'flex';
     }
 
-    /* 🟢 브레드보드 구멍 클릭 핸들러 */
     function onBreadboardHoleClick(posKey) {
         if (isSelectingBreadboardHole) {
-            // 40핀 설정 도중 '좌표 선택'으로 클릭한 경우
             document.getElementById('pinBreadboardInput').value = posKey;
             
             isSelectingBreadboardHole = false;
@@ -770,19 +764,16 @@
                 input.style.borderColor = '';
             }, 600);
         } else {
-            // 브레드보드 구멍을 그냥 직접 선택한 경우 -> 40핀과 연결 없이 독립 모달 호출
             openBbModal(posKey);
         }
     }
 
-    /* 🟢 브레드보드 전용 단독 모달 오픈 (색상, 라벨만 표시) */
     function openBbModal(posKey) {
         modalMode = 'bb';
         selectedBbPos = posKey.toUpperCase().trim();
 
         document.getElementById('pinModalTitle').innerText = `브레드보드 [${selectedBbPos}] 설정`;
 
-        // 40핀 및 브레드보드 좌표 입력란 숨김
         document.getElementById('pinGpioGroup').style.display = 'none';
         document.getElementById('pinBreadboardGroup').style.display = 'none';
 
@@ -796,7 +787,6 @@
         document.getElementById('pinModal').style.display = 'flex';
     }
 
-    /* 🟢 40핀 GPIO 헤더 클릭 시 모달 오픈 */
     function openPinModal(pinNum, overrideBreadboardPos = null) {
         modalMode = 'gpio';
         selectedPinNum = Number(pinNum);
@@ -809,7 +799,6 @@
 
         document.getElementById('pinModalTitle').innerText = `Pin ${selectedPinNum} (${pinDef.name}) 설정`;
 
-        // 40핀 및 브레드보드 좌표 입력란 표시
         document.getElementById('pinGpioGroup').style.display = 'block';
         document.getElementById('pinBreadboardGroup').style.display = 'block';
 
@@ -974,6 +963,7 @@
         }
     }
 
+    /* 🟢 전원 레일 개별 구멍 키값 및 매핑 로직 수정 */
     function renderVisualBreadboard() {
         const table = document.getElementById('visualBreadboardTable');
         table.innerHTML = '';
@@ -1035,16 +1025,36 @@
                 tr.innerHTML = `<td>${labelTd}</td>`;
 
                 for (let c = 1; c <= 30; c++) {
-                    let specificKey = '';
-                    let railKey = null;
+                    let specificKeys = [];
+                    let railKeys = [];
 
-                    if (isPlus) { specificKey = `+${c}`; railKey = '+'; }
-                    else if (isMinus) { specificKey = `-${c}`; railKey = '-'; }
-                    else if (isPlus2) { specificKey = `+2-${c}`; railKey = '+2'; }
-                    else if (isMinus2) { specificKey = `-2-${c}`; railKey = '-2'; }
-                    else { specificKey = `${r}${c}`; }
+                    if (isPlus) {
+                        specificKeys = [`+1-${c}`, `+${c}`];
+                        railKeys = ['+', '+1_RAIL'];
+                    } else if (isMinus) {
+                        specificKeys = [`-1-${c}`, `-${c}`];
+                        railKeys = ['-', '-1_RAIL'];
+                    } else if (isPlus2) {
+                        specificKeys = [`+2-${c}`];
+                        railKeys = ['+2_RAIL'];
+                    } else if (isMinus2) {
+                        specificKeys = [`-2-${c}`];
+                        railKeys = ['-2_RAIL'];
+                    } else {
+                        specificKeys = [`${r}${c}`];
+                    }
 
-                    let mapped = holeMap[specificKey] || (railKey ? holeMap[railKey] : null);
+                    let mapped = null;
+                    for (let k of specificKeys) {
+                        if (holeMap[k]) { mapped = holeMap[k]; break; }
+                    }
+                    if (!mapped) {
+                        for (let rk of railKeys) {
+                            if (holeMap[rk]) { mapped = holeMap[rk]; break; }
+                        }
+                    }
+
+                    let clickKey = specificKeys[0];
 
                     let holeTd = document.createElement('td');
                     let holeDiv = document.createElement('div');
@@ -1055,13 +1065,13 @@
                         holeDiv.style.backgroundColor = mapped.color;
                         holeDiv.innerText = mapped.pinNum;
                         if (mapped.type === 'gpio') {
-                            holeDiv.title = `Pin ${mapped.pinNum}: ${mapped.label} (${specificKey})`;
+                            holeDiv.title = `Pin ${mapped.pinNum}: ${mapped.label} (${clickKey})`;
                         } else {
-                            holeDiv.title = `브레드보드 (${specificKey}): ${mapped.label}`;
+                            holeDiv.title = `브레드보드 (${clickKey}): ${mapped.label}`;
                         }
                     }
 
-                    holeDiv.onclick = () => onBreadboardHoleClick(specificKey);
+                    holeDiv.onclick = () => onBreadboardHoleClick(clickKey);
                     holeTd.appendChild(holeDiv);
                     tr.appendChild(holeTd);
                 }
@@ -1179,7 +1189,6 @@
             return;
         }
 
-        // 1. 40핀 라즈베리파이 연결 목록
         pinKeys.forEach(pinNum => {
             const pinDef = pinDefinitions.find(p => p.num == pinNum);
             const data = currentPins[pinNum];
@@ -1196,7 +1205,6 @@
             tbody.appendChild(tr);
         });
 
-        // 2. 브레드보드 단독 연결 목록
         bbKeys.forEach(pos => {
             const data = currentBbPins[pos];
             const colorObj = availableColors.find(c => c.hex === data.color) || { name: '지정 색상' };
