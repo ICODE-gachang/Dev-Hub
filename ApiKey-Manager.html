@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API 키 매니저</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --rpi-green: #2c8c4a;
+            --rpi-dark-green: #1e5e32;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 15px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .header-btn-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        h2, h3, h4 { margin: 0; }
+
+        .btn {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background-color: var(--rpi-green);
+            color: white;
+        }
+        .btn-primary:hover { background-color: var(--rpi-dark-green); }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover { background-color: #bd2130; }
+
+        .btn-icon {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        /* 필터 및 검색 바 */
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .search-input, .category-select {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .search-input { flex: 1; min-width: 200px; }
+
+        /* API 키 카드가 나열될 그리드 */
+        .key-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+        }
+
+        .key-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 14px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .key-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .service-name {
+            font-size: 18px;
+            font-weight: bold;
+            color: #111;
+        }
+
+        .category-badge {
+            background: #eef2ff;
+            color: #4f46e5;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .author-badge {
+            display: inline-block;
+            background: #eaf5ed;
+            color: var(--rpi-green);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        /* API Key 디스플레이 상자 */
+        .key-box {
+            display: flex;
+            align-items: center;
+            background: #1e1e1e;
+            color: #10b981;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 13px;
+            gap: 8px;
+        }
+
+        .key-text {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .key-actions {
+            display: flex;
+            gap: 4px;
+        }
+
+        .meta-info {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .note-text {
+            font-size: 13px;
+            color: #555;
+            background: #f8f9fa;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--rpi-green);
+            line-height: 1.4;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 12px;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 420px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .modal-content label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .modal-content input, .modal-content select, .modal-content textarea {
+            width: 100%;
+            padding: 9px 12px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .modal-content textarea {
+            resize: vertical;
+            height: 70px;
+        }
+
+        /* 토스트 알림 */
+        #toast {
+            visibility: hidden;
+            min-width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 20px;
+            padding: 10px 16px;
+            position: fixed;
+            z-index: 300;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.3s, fadeout 0.5s 2s;
+        }
+
+        @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+        @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+    </style>
+</head>
+<body>
+    <!-- 🟢 로그인 모달 UI (추가) -->
+    <div id="login-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:99999;">
+        <div style="background:#ffffff; padding:30px; border-radius:12px; text-align:center; max-width:320px; width:90%; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+            <h3 style="margin-top:0; color:#333;">🔒 로그인</h3>
+            <p style="font-size:14px; color:#666; margin-bottom:15px;">허가된 이메일과 비밀번호를 입력하세요.</p>
+            
+            <!-- autocomplete="off" 추가 -->
+            <input type="email" id="login-email" placeholder="이메일" autocomplete="off" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            
+            <!-- autocomplete="new-password" 추가 -->
+            <input type="password" id="login-password" placeholder="비밀번호" autocomplete="new-password" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            
+            <button onclick="login()" style="width:100%; padding:10px; background:#007bff; color:white; border:none; border-radius:6px; font-size:16px; cursor:pointer;">로그인</button>
+            <p id="login-error" style="color:red; font-size:13px; display:none; margin-top:10px; margin-bottom:0;"></p>
+        </div>
+    </div>
+
+    <!-- 기존 본문 영역... -->
+<header>
+    <h2>🔑 API 키 매니저</h2>
+    <div class="header-btn-group">
+        <a href="index.html" class="btn btn-secondary">🏠 메인으로</a>
+        <a href="RPi-PinMap.html" class="btn btn-secondary">📌 핀 맵 매니저</a>
+        <a href="sensor-lib.html" class="btn btn-secondary">🔌 센서 라이브러리</a>
+        <a href="linux-cmd.html" class="btn btn-secondary">💻 리눅스 명령어</a>
+        <a href="file-archive.html" class="btn btn-secondary">📁 파일 아카이브</a>
+        <button class="btn btn-secondary" onclick="exportData()">💾 백업</button>
+        <button class="btn btn-secondary" onclick="triggerImport()">📂 복원</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importData(event)">
+        <button class="btn btn-primary" onclick="openKeyModal()">+ 새 API 키 등록</button>
+    </div>
+</header>
+
+<div class="container">
+    <!-- 검색 및 필터 바 -->
+    <div class="toolbar">
+        <input type="text" id="searchInput" class="search-input" placeholder="서비스명, 메모, 작성자 검색..." oninput="renderKeyGrid()">
+        <select id="categoryFilter" class="category-select" onchange="renderKeyGrid()">
+            <option value="all">전체 카테고리</option>
+            <option value="AI / LLM">AI / LLM (OpenAI, Claude 등)</option>
+            <option value="Cloud / DB">Cloud / DB (AWS, Firebase 등)</option>
+            <option value="Social / Auth">Social / Auth (Kakao, Naver 등)</option>
+            <option value="Maps / Location">Maps / Location</option>
+            <option value="기타">기타</option>
+        </select>
+    </div>
+
+    <!-- 카드 목록 그리드 -->
+    <div class="key-grid" id="keyGrid"></div>
+</div>
+
+<!-- API Key 추가/수정 모달 -->
+<div class="modal" id="keyModal">
+    <div class="modal-content">
+        <h3 id="modalTitle">새 API 키 등록</h3>
+        <input type="hidden" id="editKeyId">
+        
+        <div>
+            <label>서비스 / 플랫폼 이름:</label>
+            <input type="text" id="serviceInput" placeholder="예: OpenAI ChatGPT, Firebase">
+        </div>
+        
+        <div>
+            <label>카테고리:</label>
+            <select id="categorySelect">
+                <option value="AI / LLM">AI / LLM</option>
+                <option value="Cloud / DB">Cloud / DB</option>
+                <option value="Social / Auth">Social / Auth</option>
+                <option value="Maps / Location">Maps / Location</option>
+                <option value="기타">기타</option>
+            </select>
+        </div>
+
+        <div>
+            <label>API Key 값:</label>
+            <input type="text" id="keyValueInput" placeholder="sk-proj-..." style="font-family: monospace;">
+        </div>
+
+        <div>
+            <label>작성자 :</label>
+            <select id="authorSelect" onchange="toggleCustomAuthorInput(this, 'customAuthorInput')">
+                <option value="권리호">권리호</option>
+                <option value="김정한">김정한</option>
+                <option value="임창희">임창희</option>
+                <option value="장신우">장신우</option>
+                <option value="손동아">손동아 선생님</option>
+                <option value="custom">+ 직접 입력</option>
+            </select>
+            <input type="text" id="customAuthorInput" placeholder="작성자 이름 입력" style="display:none; margin-top:6px;">
+        </div>
+
+        <div>
+            <label>설명 및 메모:</label>
+            <textarea id="noteInput" placeholder="용도, 유효기간, 프로젝트명 등 자유롭게 입력"></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+            <button class="btn btn-primary" onclick="saveApiKey()">저장</button>
+            <button class="btn btn-secondary" onclick="closeModal('keyModal')">취소</button>
+        </div>
+    </div>
+</div>
+
+<!-- 토스트 메세지 -->
+<div id="toast">복사되었습니다!</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+    import { firebaseConfig } from './firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // 1. Firebase 앱, 데이터베이스 및 인증 객체 초기화 (1회만 선언)
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    // 2. 브라우저 창/탭을 닫으면 로그인이 풀리도록 세션 유지 설정
+    setPersistence(auth, browserSessionPersistence)
+        .catch((error) => {
+            console.error("Persistence 설정 오류:", error);
+        });
+
+    const apiKeysRef = ref(db, 'api_keys');
+
+    let apiKeysData = {};
+    let visibleKeys = {}; // 비밀번호 보이기/숨기기 상태 저장
+
+    // 2. 로그인 상태 감지 (로그인 성공 시 모달 숨김)
+    onAuthStateChanged(auth, (user) => {
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) {
+            if (user) {
+                loginModal.style.display = 'none';
+            } else {
+                loginModal.style.display = 'flex';
+            }
+        }
+    });
+
+    // 3. 로그인 처리 함수
+    window.login = function() {
+        const emailInput = document.getElementById('login-email');
+        const passwordInput = document.getElementById('login-password');
+        const errorMsg = document.getElementById('login-error');
+
+        if (!emailInput || !passwordInput) return;
+
+        const email = emailInput.value;
+        const password = passwordInput.value;
+
+        signInWithEmailAndPassword(auth, email, password)
+            .then(() => {
+                if (errorMsg) errorMsg.style.display = 'none';
+            })
+            .catch((error) => {
+                if (errorMsg) {
+                    errorMsg.innerText = "로그인 실패: " + error.message;
+                    errorMsg.style.display = 'block';
+                }
+            });
+    };
+
+    // 4. Firebase 실시간 데이터베이스 수신 설정
+    onValue(apiKeysRef, (snapshot) => {
+        apiKeysData = snapshot.val() || {};
+        renderKeyGrid();
+    });
+
+    function getCurrentDateTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        if (!toast) return;
+        toast.innerText = message;
+        toast.className = "show";
+        setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 2200);
+    }
+
+    function toggleCustomAuthorInput(selectEl, customInputId) {
+        const customInput = document.getElementById(customInputId);
+        if (selectEl.value === 'custom') {
+            customInput.style.display = 'block';
+            customInput.focus();
+        } else {
+            customInput.style.display = 'none';
+        }
+    }
+
+    function renderKeyGrid() {
+        const grid = document.getElementById('keyGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+
+        const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const selectedCategory = categoryFilter ? categoryFilter.value : 'all';
+
+        const keys = Object.keys(apiKeysData);
+
+        const filteredKeys = keys.filter(id => {
+            const item = apiKeysData[id];
+            const matchSearch = item.service.toLowerCase().includes(searchQuery) ||
+                                (item.note && item.note.toLowerCase().includes(searchQuery)) ||
+                                item.author.toLowerCase().includes(searchQuery);
+            const matchCategory = selectedCategory === 'all' || item.category === selectedCategory;
+            return matchSearch && matchCategory;
+        });
+
+        if (filteredKeys.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:50px; color:#888;">
+                등록된 API 키가 없거나 검색 결과가 없습니다.
+            </div>`;
+            return;
+        }
+
+        filteredKeys.forEach(id => {
+            const item = apiKeysData[id];
+            const isVisible = visibleKeys[id] || false;
+            const displayKey = isVisible ? item.keyValue : '••••••••••••••••••••••••';
+
+            const card = document.createElement('div');
+            card.className = 'key-card';
+            card.innerHTML = `
+                <div>
+                    <div class="card-header">
+                        <div class="service-name">${item.service}</div>
+                        <span class="category-badge">${item.category}</span>
+                    </div>
+                    
+                    <div class="key-box" style="margin-top: 12px;">
+                        <span class="key-text" id="keyText_${id}">${displayKey}</span>
+                        <div class="key-actions">
+                            <button class="btn btn-secondary btn-icon" onclick="toggleKeyVisibility('${id}')" title="보이기/숨기기">
+                                ${isVisible ? '🙈' : '👁️'}
+                            </button>
+                            <button class="btn btn-primary btn-icon" onclick="copyToClipboard('${item.keyValue}')" title="클립보드 복사">
+                                📋
+                            </button>
+                        </div>
+                    </div>
+
+                    ${item.note ? `<div class="note-text" style="margin-top: 12px;">${item.note}</div>` : ''}
+                </div>
+
+                <div>
+                    <div class="meta-info">
+                        <span>작성자: <span class="author-badge">${item.author}</span></span>
+                        <span>${item.date}</span>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-secondary btn-icon" onclick="openKeyModal('${id}')">✏️ 수정</button>
+                        <button class="btn btn-danger btn-icon" onclick="deleteApiKey('${id}')">🗑️ 삭제</button>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function toggleKeyVisibility(id) {
+        visibleKeys[id] = !visibleKeys[id];
+        renderKeyGrid();
+    }
+
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text).then(() => {
+            showToast("📋 API Key가 클립보드에 복사되었습니다!");
+        }).catch(() => {
+            showToast("❌ 복사에 실패했습니다.");
+        });
+    }
+
+    function openKeyModal(id = null) {
+        document.getElementById('editKeyId').value = id || '';
+        if (id && apiKeysData[id]) {
+            const item = apiKeysData[id];
+            document.getElementById('modalTitle').innerText = 'API 키 수정';
+            document.getElementById('serviceInput').value = item.service;
+            document.getElementById('categorySelect').value = item.category;
+            document.getElementById('keyValueInput').value = item.keyValue;
+            document.getElementById('noteInput').value = item.note || '';
+
+            const authorSelect = document.getElementById('authorSelect');
+            if (['권리호', '김정한', '임창희', '장신우', '손동아'].includes(item.author)) {
+                authorSelect.value = item.author;
+                document.getElementById('customAuthorInput').style.display = 'none';
+            } else {
+                authorSelect.value = 'custom';
+                document.getElementById('customAuthorInput').style.display = 'block';
+                document.getElementById('customAuthorInput').value = item.author;
+            }
+        } else {
+            document.getElementById('modalTitle').innerText = '새 API 키 등록';
+            document.getElementById('serviceInput').value = '';
+            document.getElementById('categorySelect').value = 'AI / LLM';
+            document.getElementById('keyValueInput').value = '';
+            document.getElementById('noteInput').value = '';
+            document.getElementById('authorSelect').value = '권리호';
+            document.getElementById('customAuthorInput').style.display = 'none';
+            document.getElementById('customAuthorInput').value = '';
+        }
+        document.getElementById('keyModal').style.display = 'flex';
+    }
+
+    function saveApiKey() {
+        const id = document.getElementById('editKeyId').value || ('key_' + Date.now());
+        const service = document.getElementById('serviceInput').value.trim();
+        const category = document.getElementById('categorySelect').value;
+        const keyValue = document.getElementById('keyValueInput').value.trim();
+        const note = document.getElementById('noteInput').value.trim();
+        
+        const authorSelect = document.getElementById('authorSelect').value;
+        let author = authorSelect === 'custom' ? document.getElementById('customAuthorInput').value.trim() : authorSelect;
+
+        if (!service) {
+            alert("서비스 이름을 입력해주세요.");
+            return;
+        }
+        if (!keyValue) {
+            alert("API Key 값을 입력해주세요.");
+            return;
+        }
+        if (!author) {
+            alert("작성자를 입력해주세요.");
+            return;
+        }
+
+        apiKeysData[id] = {
+            id: id,
+            service: service,
+            category: category,
+            keyValue: keyValue,
+            author: author,
+            note: note,
+            date: getCurrentDateTime()
+        };
+
+        saveToFirebase();
+        closeModal('keyModal');
+        showToast("💾 저장되었습니다.");
+    }
+
+    function deleteApiKey(id) {
+        if (confirm(`'${apiKeysData[id].service}' API 키를 삭제하시겠습니까?`)) {
+            delete apiKeysData[id];
+            saveToFirebase();
+            showToast("🗑️ 삭제되었습니다.");
+        }
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    function saveToFirebase() {
+        set(apiKeysRef, apiKeysData);
+    }
+
+    function exportData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(apiKeysData, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `apikeys_backup_${Date.now()}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function triggerImport() {
+        document.getElementById('importFileInput').click();
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedData = JSON.parse(e.target.result);
+                if (typeof importedData === 'object') {
+                    apiKeysData = Object.assign(apiKeysData, importedData);
+                    saveToFirebase();
+                    showToast("📂 백업 데이터를 불러왔습니다.");
+                } else {
+                    alert('올바르지 않은 백업 파일 형태입니다.');
+                }
+            } catch (err) {
+                alert('JSON 파일을 읽는 동안 오류가 발생했습니다.');
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    // Window 객체 바인딩 (이벤트 연결용)
+    window.openKeyModal = openKeyModal;
+    window.saveApiKey = saveApiKey;
+    window.deleteApiKey = deleteApiKey;
+    window.closeModal = closeModal;
+    window.toggleCustomAuthorInput = toggleCustomAuthorInput;
+    window.toggleKeyVisibility = toggleKeyVisibility;
+    window.copyToClipboard = copyToClipboard;
+    window.renderKeyGrid = renderKeyGrid;
+    window.exportData = exportData;
+    window.triggerImport = triggerImport;
+    window.importData = importData;
+</script>

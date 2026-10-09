@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <header>
+    <h2>🔌 라즈베리파이 센서 라이브러리</h2>
+    <div class="header-btn-group">
+        <a href="index.html" class="btn btn-secondary">🏠 메인으로</a>
+        <a href="RPi-PinMap.html" class="btn btn-secondary">📌 핀 맵 매니저</a>
+        <a href="ApiKey-Manager.html" class="btn btn-secondary">🔑 API 키 매니저</a>
+        <a href="linux-cmd.html" class="btn btn-secondary">💻 리눅스 명령어</a>
+        <a href="file-archive.html" class="btn btn-secondary">📁 파일 아카이브</a>
+        <button class="btn btn-secondary" onclick="exportData()">💾 백업</button>
+        <button class="btn btn-secondary" onclick="triggerImport()">📂 복원</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importData(event)">
+        <button class="btn btn-primary" onclick="openModal()">+ 새 센서 등록</button>
+    </div>
+</header>
+    <title>라즈베리파이 센서 라이브러리 & 코드 매니저</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --rpi-green: #2c8c4a;
+            --rpi-dark-green: #1e5e32;
+            --code-bg: #1e1e1e;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1050px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 15px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .header-btn-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        h2, h3, h4 { margin: 0; }
+
+        .btn {
+            padding: 9px 14px;
+            border: none;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background-color: var(--rpi-green);
+            color: white;
+        }
+        .btn-primary:hover { background-color: var(--rpi-dark-green); }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover { background-color: #bd2130; }
+
+        .controls-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .controls-bar input {
+            flex: 1;
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+
+        .view { display: none; }
+        .view.active { display: block; }
+
+        .sensor-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .sensor-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .sensor-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .sensor-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 6px;
+        }
+
+        .sensor-category {
+            display: inline-block;
+            background: #e1f5fe;
+            color: #0288d1;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .sensor-desc-snippet {
+            font-size: 13px;
+            color: #555;
+            line-height: 1.4;
+            height: 38px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            margin-bottom: 12px;
+        }
+
+        .author-badge {
+            display: inline-block;
+            background: #eaf5ed;
+            color: var(--rpi-green);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .sensor-meta {
+            font-size: 12px;
+            color: #777;
+            margin-bottom: 4px;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 14px;
+        }
+
+        .detail-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+        }
+
+        .detail-header-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+
+        .code-box-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #2d2d2d;
+            color: #ccc;
+            padding: 8px 16px;
+            border-top-left-radius: 8px;
+            border-top-right-radius: 8px;
+            font-size: 12px;
+            font-family: monospace;
+        }
+
+        pre {
+            background: var(--code-bg);
+            color: #d4d4d4;
+            padding: 16px;
+            border-bottom-left-radius: 8px;
+            border-bottom-right-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            margin: 0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 550px;
+            max-width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .modal-content label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .modal-content input, .modal-content select, .modal-content textarea {
+            width: 100%;
+            padding: 9px 12px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .modal-content textarea {
+            resize: vertical;
+        }
+    </style>
+</head>
+<body>
+    <!-- 🟢 로그인 모달 UI (추가) -->
+    <div id="login-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:99999;">
+        <div style="background:#ffffff; padding:30px; border-radius:12px; text-align:center; max-width:320px; width:90%; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+            <h3 style="margin-top:0; color:#333;">🔒 로그인</h3>
+            <p style="font-size:14px; color:#666; margin-bottom:15px;">허가된 이메일과 비밀번호를 입력하세요.</p>
+            
+            <!-- autocomplete="off" 추가 -->
+            <input type="email" id="login-email" placeholder="이메일" autocomplete="off" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            
+            <!-- autocomplete="new-password" 추가 -->
+            <input type="password" id="login-password" placeholder="비밀번호" autocomplete="new-password" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            
+            <button onclick="login()" style="width:100%; padding:10px; background:#007bff; color:white; border:none; border-radius:6px; font-size:16px; cursor:pointer;">로그인</button>
+            <p id="login-error" style="color:red; font-size:13px; display:none; margin-top:10px; margin-bottom:0;"></p>
+        </div>
+    </div>
+    <!-- 기존 본문 영역... -->
+<div class="container">
+    <div id="homeView" class="view active">
+        <div class="controls-bar">
+            <input type="text" id="searchInput" placeholder="센서 이름, 카테고리 또는 설명으로 검색..." onkeyup="filterSensors()">
+        </div>
+        <div class="sensor-grid" id="sensorGrid"></div>
+    </div>
+
+    <div id="detailView" class="view">
+        <div style="margin-bottom: 16px;">
+            <button class="btn btn-secondary" onclick="showHome()">← 센서 목록으로</button>
+        </div>
+        
+        <div class="detail-card">
+            <div class="detail-header-info">
+                <div>
+                    <span id="detailCategory" class="sensor-category"></span>
+                    <h2 id="detailTitle" style="margin-top: 4px;"></h2>
+                </div>
+                <div style="text-align: right;">
+                    <span id="detailAuthor" class="author-badge"></span>
+                    <div id="detailDate" style="font-size: 12px; color: #777; margin-top: 6px;"></div>
+                </div>
+            </div>
+
+            <div style="margin-bottom: 24px;">
+                <h3>📝 센서 설명 및 핀 연결 가이드</h3>
+                <p id="detailDescription" style="line-height: 1.6; color: #444; white-space: pre-line; margin-top: 8px;"></p>
+            </div>
+
+            <div>
+                <div class="code-box-header">
+                    <span>Python Sample Code</span>
+                    <button class="btn btn-secondary" style="padding: 4px 8px; font-size: 11px;" onclick="copyCode()">📋 코드 복사</button>
+                </div>
+                <pre><code id="detailCode"></code></pre>
+            </div>
+
+            <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 8px;">
+                <button class="btn btn-primary" onclick="editCurrentSensor()">수정</button>
+                <button class="btn btn-danger" onclick="deleteCurrentSensor()">삭제</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal" id="sensorModal">
+    <div class="modal-content">
+        <h3 id="modalTitle">센서 등록</h3>
+        
+        <div>
+            <label>센서 이름:</label>
+            <input type="text" id="modalTitleInput" placeholder="예: DHT11 온습도 센서">
+        </div>
+
+        <div style="display: flex; gap: 12px;">
+            <div style="flex: 1;">
+                <label>카테고리:</label>
+                <input type="text" id="modalCategoryInput" placeholder="예: 온/습도, 거리, 빛">
+            </div>
+            <div style="flex: 1;">
+                <label>작성자 :</label>
+                <select id="modalAuthorSelect" onchange="toggleCustomAuthorInput(this, 'modalCustomAuthorInput')">
+                    <option value="권리호">권리호</option>
+                    <option value="김정한">김정한</option>
+                    <option value="임창희">임창희</option>
+                    <option value="장신우">장신우</option>
+                    <option value="손동아">손동아 선생님</option>
+                    <option value="custom">+ 직접 입력</option>
+                </select>
+                <input type="text" id="modalCustomAuthorInput" placeholder="작성자 이름 입력" style="display:none; margin-top:6px;">
+            </div>
+        </div>
+
+        <div>
+            <label>센서 설명 및 연결 정보:</label>
+            <textarea id="modalDescInput" rows="4" placeholder="센서 동작 원리 및 GPIO 연결 핀 번호 설명 입력..."></textarea>
+        </div>
+
+        <div>
+            <label>샘플 파이썬 코드:</label>
+            <textarea id="modalCodeInput" rows="8" style="font-family: monospace;" placeholder="import RPi.GPIO as GPIO..."></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+            <button class="btn btn-primary" onclick="saveSensor()">저장</button>
+            <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDK (v10 모듈 방식) -->
+<script type="module">
+    import { firebaseConfig } from './firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // 1. Firebase 앱 및 데이터베이스/인증 객체 초기화 (1회만 선언)
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    // 2. 브라우저 창/탭을 닫으면 로그인이 풀리도록 세션 유지 설정
+    setPersistence(auth, browserSessionPersistence)
+        .catch((error) => {
+            console.error("Persistence 설정 오류:", error);
+        });
+
+    const sensorsRef = ref(db, 'sensors_db');
+
+    let sensors = {};
+    let currentSensorId = null;
+    let editingSensorId = null;
+
+    // 2. 로그인 상태 감지 (로그인 완료 시 로그인 모달 숨김)
+    onAuthStateChanged(auth, (user) => {
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) {
+            if (user) {
+                loginModal.style.display = 'none';
+            } else {
+                loginModal.style.display = 'flex';
+            }
+        }
+    });
+
+    // 3. 로그인 처리 함수
+    window.login = function() {
+        const emailInput = document.getElementById('login-email');
+        const passwordInput = document.getElementById('login-password');
+        const errorMsg = document.getElementById('login-error');
+
+        if (!emailInput || !passwordInput) return;
+
+        const email = emailInput.value;
+        const password = passwordInput.value;
+
+        signInWithEmailAndPassword(auth, email, password)
+            .then(() => {
+                if (errorMsg) errorMsg.style.display = 'none';
+            })
+            .catch((error) => {
+                if (errorMsg) {
+                    errorMsg.innerText = "로그인 실패: " + error.message;
+                    errorMsg.style.display = 'block';
+                }
+            });
+    };
+
+    // 4. Firebase 실시간 리스너 수신 설정
+    onValue(sensorsRef, (snapshot) => {
+        sensors = snapshot.val() || {};
+        renderSensorGrid();
+        if (currentSensorId && sensors[currentSensorId]) {
+            openDetail(currentSensorId);
+        }
+    });
+
+    function getCurrentDateTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    function toggleCustomAuthorInput(selectEl, customInputId) {
+        const customInput = document.getElementById(customInputId);
+        if (selectEl.value === 'custom') {
+            customInput.style.display = 'block';
+            customInput.focus();
+        } else {
+            customInput.style.display = 'none';
+        }
+    }
+
+    function renderSensorGrid(filteredList = null) {
+        const grid = document.getElementById('sensorGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const dataToRender = filteredList || Object.values(sensors);
+
+        if (dataToRender.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:#888;">
+                등록된 센서가 없습니다. 상단의 '+ 새 센서 등록' 버튼을 눌러 시작하세요!
+            </div>`;
+            return;
+        }
+
+        dataToRender.forEach(sensor => {
+            const card = document.createElement('div');
+            card.className = 'sensor-card';
+            card.innerHTML = `
+                <div>
+                    <span class="sensor-category">${sensor.category || '기타'}</span>
+                    <div class="sensor-title">${sensor.title}</div>
+                    <div class="sensor-desc-snippet">${sensor.description || '설명 없음'}</div>
+                    <div class="sensor-meta">
+                        작성자: <span class="author-badge">${sensor.author}</span>
+                    </div>
+                    <div class="sensor-meta">
+                        ${sensor.date}
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-primary" style="flex:1;" onclick="openDetail('${sensor.id}')">코드 보기</button>
+                    <button class="btn btn-secondary" onclick="openModal('${sensor.id}')">수정</button>
+                    <button class="btn btn-danger" onclick="deleteSensorFromGrid('${sensor.id}')">삭제</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function filterSensors() {
+        const searchInput = document.getElementById('searchInput');
+        if (!searchInput) return;
+
+        const query = searchInput.value.toLowerCase();
+        const filtered = Object.values(sensors).filter(s => 
+            (s.title && s.title.toLowerCase().includes(query)) ||
+            (s.category && s.category.toLowerCase().includes(query)) ||
+            (s.description && s.description.toLowerCase().includes(query))
+        );
+        renderSensorGrid(filtered);
+    }
+
+    function showHome() {
+        currentSensorId = null;
+        document.getElementById('detailView').classList.remove('active');
+        document.getElementById('homeView').classList.add('active');
+        renderSensorGrid();
+    }
+
+    function openDetail(id) {
+        currentSensorId = id;
+        const sensor = sensors[id];
+        if (!sensor) return;
+
+        document.getElementById('detailTitle').innerText = sensor.title;
+        document.getElementById('detailCategory').innerText = sensor.category || '기타';
+        document.getElementById('detailAuthor').innerText = `${sensor.author}`;
+        document.getElementById('detailDate').innerText = `최종 수정: ${sensor.date}`;
+        document.getElementById('detailDescription').innerText = sensor.description;
+        document.getElementById('detailCode').innerText = sensor.code;
+
+        document.getElementById('homeView').classList.remove('active');
+        document.getElementById('detailView').classList.add('active');
+    }
+
+    function openModal(id = null) {
+        editingSensorId = id;
+        const select = document.getElementById('modalAuthorSelect');
+        const customInput = document.getElementById('modalCustomAuthorInput');
+
+        if (id && sensors[id]) {
+            const s = sensors[id];
+            document.getElementById('modalTitle').innerText = "센서 수정";
+            document.getElementById('modalTitleInput').value = s.title;
+            document.getElementById('modalCategoryInput').value = s.category;
+            
+            const standardOptions = Array.from(select.options).map(o => o.value);
+            if (standardOptions.includes(s.author)) {
+                select.value = s.author;
+                customInput.style.display = 'none';
+            } else {
+                select.value = 'custom';
+                customInput.style.display = 'block';
+                customInput.value = s.author;
+            }
+
+            document.getElementById('modalDescInput').value = s.description;
+            document.getElementById('modalCodeInput').value = s.code;
+        } else {
+            document.getElementById('modalTitle').innerText = "새 센서 등록";
+            document.getElementById('modalTitleInput').value = '';
+            document.getElementById('modalCategoryInput').value = '';
+            select.value = '권리호';
+            customInput.style.display = 'none';
+            customInput.value = '';
+            document.getElementById('modalDescInput').value = '';
+            document.getElementById('modalCodeInput').value = '';
+        }
+        document.getElementById('sensorModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('sensorModal').style.display = 'none';
+        editingSensorId = null;
+    }
+
+    function saveSensor() {
+        const title = document.getElementById('modalTitleInput').value.trim();
+        const category = document.getElementById('modalCategoryInput').value.trim();
+        const selectAuthor = document.getElementById('modalAuthorSelect').value;
+        let author = selectAuthor;
+
+        if (selectAuthor === 'custom') {
+            author = document.getElementById('modalCustomAuthorInput').value.trim();
+        }
+
+        const description = document.getElementById('modalDescInput').value.trim();
+        const code = document.getElementById('modalCodeInput').value;
+
+        if (!title) {
+            alert("센서 이름을 입력해 주세요.");
+            return;
+        }
+
+        if (!author) {
+            alert("작성자를 입력해 주세요.");
+            return;
+        }
+
+        const id = editingSensorId || ('sensor_' + Date.now());
+
+        sensors[id] = {
+            id: id,
+            title: title,
+            category: category || '기타',
+            author: author,
+            date: getCurrentDateTime(),
+            description: description,
+            code: code
+        };
+
+        saveToFirebase();
+        closeModal();
+
+        if (currentSensorId === id) {
+            openDetail(id);
+        } else {
+            showHome();
+        }
+    }
+
+    function editCurrentSensor() {
+        if (currentSensorId) openModal(currentSensorId);
+    }
+
+    function deleteSensorFromGrid(id) {
+        const sensor = sensors[id];
+        if (!sensor) return;
+        
+        if (confirm(`'${sensor.title}' 센서를 정말 삭제하시겠습니까?`)) {
+            delete sensors[id];
+            saveToFirebase();
+            renderSensorGrid();
+        }
+    }
+
+    function deleteCurrentSensor() {
+        if (currentSensorId && confirm("이 센서 정보를 정말 삭제하시겠습니까?")) {
+            delete sensors[currentSensorId];
+            saveToFirebase();
+            showHome();
+        }
+    }
+
+    function deleteAllSensors() {
+        if (confirm("모든 센서 데이터를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.")) {
+            sensors = {};
+            saveToFirebase();
+            showHome();
+        }
+    }
+
+    function copyCode() {
+        const codeText = document.getElementById('detailCode').innerText;
+        navigator.clipboard.writeText(codeText).then(() => {
+            alert("코드가 클립보드에 복사되었습니다!");
+        }).catch(() => {
+            alert("코드 복사에 실패했습니다.");
+        });
+    }
+
+    function saveToFirebase() {
+        set(sensorsRef, sensors);
+    }
+
+    function exportData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(sensors, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `rpi_sensors_backup_${Date.now()}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function triggerImport() {
+        document.getElementById('importFileInput').click();
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedSensors = JSON.parse(e.target.result);
+                if (typeof importedSensors === 'object') {
+                    sensors = Object.assign(sensors, importedSensors);
+                    saveToFirebase();
+                    alert('센서 라이브러리 데이터를 성공적으로 불러왔습니다!');
+                } else {
+                    alert('올바르지 않은 백업 파일 형태입니다.');
+                }
+            } catch (err) {
+                alert('JSON 파일을 읽는 동안 오류가 발생했습니다.');
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    // 전역 함수로 바인딩 (onclick 등 이벤트 핸들러용)
+    window.filterSensors = filterSensors;
+    window.showHome = showHome;
+    window.openDetail = openDetail;
+    window.openModal = openModal;
+    window.closeModal = closeModal;
+    window.saveSensor = saveSensor;
+    window.editCurrentSensor = editCurrentSensor;
+    window.deleteSensorFromGrid = deleteSensorFromGrid;
+    window.deleteCurrentSensor = deleteCurrentSensor;
+    window.deleteAllSensors = deleteAllSensors;
+    window.copyCode = copyCode;
+    window.toggleCustomAuthorInput = toggleCustomAuthorInput;
+    window.exportData = exportData;
+    window.triggerImport = triggerImport;
+    window.importData = importData;
+</script>

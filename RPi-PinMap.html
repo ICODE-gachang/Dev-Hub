@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>라즈베리파이 3B+ 프로젝트 핀 맵 매니저</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --rpi-green: #2c8c4a;
+            --rpi-dark-green: #1e5e32;
+            --bb-bg: #f2f0e6;
+            --bb-border: #d3cfbe;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 15px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .header-btn-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        h2, h3, h4 { margin: 0; }
+
+        .btn {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background-color: var(--rpi-green);
+            color: white;
+        }
+        .btn-primary:hover { background-color: var(--rpi-dark-green); }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover { background-color: #bd2130; }
+
+        .view { display: none; }
+        .view.active { display: block; }
+
+        .project-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+
+        .project-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .project-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .project-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: #111;
+            margin-bottom: 8px;
+        }
+
+        .project-meta {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .author-badge {
+            display: inline-block;
+            background: #eaf5ed;
+            color: var(--rpi-green);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .detail-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: white;
+            padding: 16px 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        .interactive-grid {
+            display: grid;
+            grid-template-columns: 330px 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 900px) {
+            .interactive-grid { grid-template-columns: 1fr; }
+        }
+
+        .pinout-card, .breadboard-card, .summary-card {
+            background: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+        }
+
+        .right-pane {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header-box {
+            background: #1e1e1e;
+            padding: 16px 10px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .pin-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .pin-label {
+            font-size: 11px;
+            color: #bbb;
+            width: 95px;
+            font-family: monospace;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pin-label.left { text-align: right; }
+        .pin-label.right { text-align: left; }
+
+        .pin-node {
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background-color: #555;
+            color: white;
+            font-size: 10px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            border: 2px solid #333;
+            transition: transform 0.1s;
+        }
+
+        .pin-node:hover {
+            transform: scale(1.25);
+            z-index: 10;
+        }
+
+        .pin-node.configured {
+            border-color: #ffffff;
+            box-shadow: 0 0 6px rgba(255,255,255,0.6);
+        }
+
+        /* 브레드보드 스타일 */
+        .breadboard-card {
+            transition: outline 0.2s, box-shadow 0.2s;
+        }
+
+        .breadboard-wrapper {
+            background-color: var(--bb-bg);
+            border: 2px solid var(--bb-border);
+            border-radius: 12px;
+            padding: 16px;
+            overflow-x: auto;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.04);
+        }
+
+        .breadboard-table {
+            border-collapse: collapse;
+            margin: 0 auto;
+            user-select: none;
+        }
+
+        .breadboard-table td {
+            padding: 2px;
+            text-align: center;
+            border: none;
+        }
+
+        .bb-hole {
+            width: 18px;
+            height: 18px;
+            background-color: #333;
+            border-radius: 3px;
+            margin: 1px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: inset 1px 1px 2px rgba(0,0,0,0.8);
+            transition: transform 0.1s, outline 0.1s;
+        }
+
+        .bb-hole:hover {
+            transform: scale(1.4);
+            z-index: 5;
+            outline: 2px solid #ff9800;
+        }
+
+        .bb-hole.active-wire {
+            border-radius: 50%;
+            box-shadow: 0 0 6px rgba(0,0,0,0.5);
+            border: 1px solid #fff;
+        }
+
+        .bb-label {
+            font-size: 10px;
+            font-weight: bold;
+            color: #777;
+            font-family: monospace;
+        }
+
+        .bb-rail-plus { color: #d9534f; font-weight: bold; font-size: 11px; }
+        .bb-rail-minus { color: #0275d8; font-weight: bold; font-size: 11px; }
+
+        .bb-trench {
+            height: 12px;
+            background: #d8d4c5;
+            border-top: 1px solid #c4bfb0;
+            border-bottom: 1px solid #c4bfb0;
+        }
+
+        table.summary-tbl {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+
+        table.summary-tbl th, table.summary-tbl td {
+            border-bottom: 1px solid var(--border-color);
+            padding: 10px 8px;
+            text-align: left;
+        }
+
+        .breadboard-tag {
+            display: inline-block;
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .color-badge {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 6px;
+            vertical-align: middle;
+            border: 1px solid #ccc;
+        }
+
+        #selectGuideBanner {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 300;
+            background: #2c8c4a;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 30px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+            font-weight: bold;
+            font-size: 14px;
+            align-items: center;
+            gap: 14px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(44, 140, 74, 0.7); }
+            70% { box-shadow: 0 0 0 12px rgba(44, 140, 74, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(44, 140, 74, 0); }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .modal-content label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .modal-content input, .modal-content select {
+            width: 100%;
+            padding: 8px 10px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+
+        .color-picker {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .color-option {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+
+        .color-option.selected {
+            border-color: #000;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+    <!-- 🟢 로그인 모달 UI (추가) -->
+    <div id="login-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:99999;">
+        <div style="background:#ffffff; padding:30px; border-radius:12px; text-align:center; max-width:320px; width:90%; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+            <h3 style="margin-top:0; color:#333;">🔒 로그인</h3>
+            <p style="font-size:14px; color:#666; margin-bottom:15px;">허가된 이메일과 비밀번호를 입력하세요.</p>
+            
+            <!-- autocomplete="off" 추가 -->
+            <input type="email" id="login-email" placeholder="이메일" autocomplete="off" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            
+            <!-- autocomplete="new-password" 추가 -->
+            <input type="password" id="login-password" placeholder="비밀번호" autocomplete="new-password" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            
+            <button onclick="login()" style="width:100%; padding:10px; background:#007bff; color:white; border:none; border-radius:6px; font-size:16px; cursor:pointer;">로그인</button>
+            <p id="login-error" style="color:red; font-size:13px; display:none; margin-top:10px; margin-bottom:0;"></p>
+        </div>
+    </div>
+
+    <!-- 기존 본문 영역... -->
+<div id="selectGuideBanner">
+    <span>🎯 브레드보드에서 연결할 구멍(좌표)을 직접 클릭하세요!</span>
+    <button class="btn btn-secondary" onclick="cancelBreadboardSelection()" style="padding:4px 10px; font-size:12px; background:rgba(255,255,255,0.25); border:1px solid white; color:white;">취소</button>
+</div>
+
+<header>
+    <h2>📌 라즈베리파이 3B+ 핀 맵 매니저</h2>
+    <div class="header-btn-group">
+        <a href="index.html" class="btn btn-secondary">🏠 메인으로</a>
+        <a href="sensor-lib.html" class="btn btn-secondary">🔌 센서 라이브러리</a>
+        <a href="ApiKey-Manager.html" class="btn btn-secondary">🔑 API 키 매니저</a>
+        <a href="linux-cmd.html" class="btn btn-secondary">💻 리눅스 명령어</a>
+        <a href="file-archive.html" class="btn btn-secondary">📁 파일 아카이브</a>
+        <button class="btn btn-secondary" onclick="exportData()">💾 백업</button>
+        <button class="btn btn-secondary" onclick="triggerImport()">📂 복원</button>
+        <input type="file" id="importFileInput" accept=".json" style="display:none;" onchange="importData(event)">
+        <button id="homeNewBtn" class="btn btn-primary" onclick="openNewProjectModal()">+ 새 프로젝트 생성</button>
+    </div>
+</header>
+
+<div class="container">
+    <div id="homeView" class="view active">
+        <h3 style="margin-bottom: 16px;">프로젝트 목록</h3>
+        <div class="project-grid" id="projectGrid"></div>
+    </div>
+
+    <div id="detailView" class="view">
+        <div class="detail-header">
+            <div>
+                <button class="btn btn-secondary" onclick="showHome()">← 홈으로</button>
+            </div>
+            <div style="text-align: right;">
+                <h3 id="detailTitle" style="display:inline-block; margin-right:10px;"></h3>
+                <span id="detailAuthor" class="author-badge"></span>
+                <div id="detailDate" style="font-size:12px; color:#777; margin-top:4px;"></div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="interactive-grid">
+                <!-- 좌측 영역: GPIO 핀 레이아웃 -->
+                <div class="pinout-card">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <h3>GPIO 40-Pin</h3>
+                        <button class="btn btn-primary" id="toggleBbBtn" onclick="toggleBreadboardView()" style="font-size:12px; padding:6px 12px;">
+                            브레드보드 추가하기
+                        </button>
+                    </div>
+                    <p style="font-size: 12px; color: #666; margin-bottom: 15px;">
+                        핀을 클릭하여 와이어 색상 및 연결 정보를 설정하세요.
+                    </p>
+                    <div class="header-box" id="gpioHeader"></div>
+                </div>
+
+                <!-- 우측 영역: 브레드보드(선택적) + 요약 표 -->
+                <div class="right-pane">
+                    <!-- 브레드보드 패널 (기본 숨김) -->
+                    <div class="breadboard-card" id="breadboardCard" style="display: none;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                            <h3>실시간 브레드보드 (Visual Breadboard)</h3>
+                            <span style="font-size: 12px; color: var(--rpi-green); font-weight: bold;">
+                                원하는 구멍을 직접 클릭하여 선택
+                            </span>
+                        </div>
+                        <div class="breadboard-wrapper">
+                            <table class="breadboard-table" id="visualBreadboardTable"></table>
+                        </div>
+                    </div>
+
+                    <!-- 요약 표 패널 -->
+                    <div class="summary-card">
+                        <h3>연결 목록 요약</h3>
+                        <table class="summary-tbl">
+                            <thead>
+                                <tr>
+                                    <th>Pin</th>
+                                    <th>기능</th>
+                                    <th>점퍼 색상</th>
+                                    <th>브레드보드 위치</th>
+                                    <th>연결 장치 / 신호</th>
+                                </tr>
+                            </thead>
+                            <tbody id="summaryTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- New Project Modal -->
+<div class="modal" id="newProjectModal">
+    <div class="modal-content">
+        <h3>새 프로젝트 만들기</h3>
+        <div>
+            <label>프로젝트 이름:</label>
+            <input type="text" id="newProjTitleInput" placeholder="예: 스마트팜 제어기">
+        </div>
+        <div>
+            <label>작성자 :</label>
+            <select id="newProjAuthorSelect" onchange="toggleCustomAuthorInput(this, 'newProjCustomAuthorInput')">
+                <option value="권리호">권리호</option>
+                <option value="김정한">김정한</option>
+                <option value="임창희">임창희</option>
+                <option value="장신우">장신우</option>
+                <option value="손동아">손동아 선생님</option>
+                <option value="custom">+ 직접 입력</option>
+            </select>
+            <input type="text" id="newProjCustomAuthorInput" placeholder="작성자 이름 입력" style="display:none; margin-top:6px;">
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+            <button class="btn btn-primary" onclick="saveNewProject()">생성</button>
+            <button class="btn btn-secondary" onclick="closeModal('newProjectModal')">취소</button>
+        </div>
+    </div>
+</div>
+
+<!-- Pin Setting Modal -->
+<div class="modal" id="pinModal">
+    <div class="modal-content">
+        <h4 id="pinModalTitle">핀 설정</h4>
+        <div>
+            <label>점퍼 와이어 색상:</label>
+            <div class="color-picker" id="colorPicker"></div>
+        </div>
+        <div>
+            <label>브레드보드 위치 (좌표):</label>
+            <div style="display:flex; gap:6px;">
+                <input type="text" id="pinBreadboardInput" placeholder="예: A15, +15, +2-10" onclick="startBreadboardSelection()" readonly style="cursor:pointer; background:#f9f9f9;">
+                <button type="button" class="btn btn-secondary" style="white-space:nowrap; font-size:12px;" onclick="startBreadboardSelection()">🎯 좌표 선택</button>
+            </div>
+        </div>
+        <div>
+            <label>연결 장치 / 신호 라벨:</label>
+            <input type="text" id="pinLabelInput" placeholder="예: DHT11 Data, LED (+)">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
+            <button class="btn btn-danger" onclick="clearPinData()">초기화</button>
+            <button class="btn btn-primary" onclick="savePinData()">저장</button>
+            <button class="btn btn-secondary" onclick="closeModal('pinModal')">취소</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { firebaseConfig } from './firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // 1. Firebase 앱 및 데이터베이스/인증 객체 초기화 (1회만 실행)
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    // 💡 브라우저 창/탭을 닫으면 로그인이 풀리도록 세션 유지 설정
+    setPersistence(auth, browserSessionPersistence)
+        .catch((error) => {
+            console.error("Persistence 설정 오류:", error);
+        });
+
+    const projectsRef = ref(db, 'pinmap_projects');
+
+    // 2. 로그인 상태 감지 (로그인 완료 시 모달 숨김)
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('login-modal').style.display = 'none';
+        } else {
+            document.getElementById('login-modal').style.display = 'flex';
+        }
+    });
+
+    // 3. 로그인 처리 함수
+    window.login = function() {
+        const email = document.getElementById('login-email').value;
+        const password = document.getElementById('login-password').value;
+        const errorMsg = document.getElementById('login-error');
+
+        signInWithEmailAndPassword(auth, email, password)
+            .then(() => {
+                errorMsg.style.display = 'none';
+            })
+            .catch((error) => {
+                errorMsg.innerText = "로그인 실패: " + error.message;
+                errorMsg.style.display = 'block';
+            });
+    };
+
+    // --- 이하 RPi PinMap 로직 ---
+    const pinDefinitions = [
+        { num: 1, name: "3V3 power" },      { num: 2, name: "5V power" },
+        { num: 3, name: "GPIO 2 (SDA)" },   { num: 4, name: "5V power" },
+        { num: 5, name: "GPIO 3 (SCL)" },   { num: 6, name: "Ground" },
+        { num: 7, name: "GPIO 4 (GPCLK0)" },{ num: 8, name: "GPIO 14 (TXD)" },
+        { num: 9, name: "Ground" },         { num: 10, name: "GPIO 15 (RXD)" },
+        { num: 11, name: "GPIO 17" },        { num: 12, name: "GPIO 18 (PCM_CLK)" },
+        { num: 13, name: "GPIO 27" },        { num: 14, name: "Ground" },
+        { num: 15, name: "GPIO 22" },        { num: 16, name: "GPIO 23" },
+        { num: 17, name: "3V3 power" },      { num: 18, name: "GPIO 24" },
+        { num: 19, name: "GPIO 10 (MOSI)" },{ num: 20, name: "Ground" },
+        { num: 21, name: "GPIO 9 (MISO)" }, { num: 22, name: "GPIO 25" },
+        { num: 23, name: "GPIO 11 (SCLK)" },{ num: 24, name: "GPIO 8 (CE0)" },
+        { num: 25, name: "Ground" },        { num: 26, name: "GPIO 7 (CE1)" },
+        { num: 27, name: "GPIO 0 (ID_SD)" },{ num: 28, name: "GPIO 1 (ID_SC)" },
+        { num: 29, name: "GPIO 5" },        { num: 30, name: "Ground" },
+        { num: 31, name: "GPIO 6" },        { num: 32, name: "GPIO 12 (PWM0)" },
+        { num: 33, name: "GPIO 13 (PWM1)" },{ num: 34, name: "Ground" },
+        { num: 35, name: "GPIO 19 (PCM_FS)"},{ num: 36, name: "GPIO 16" },
+        { num: 37, name: "GPIO 26" },        { num: 38, name: "GPIO 20 (PCM_DIN)" },
+        { num: 39, name: "Ground" },        { num: 40, name: "GPIO 21 (PCM_DOUT)" }
+    ];
+
+    const availableColors = [
+        { name: "빨강 (Red)", hex: "#e74c3c" },
+        { name: "주황 (Orange)", hex: "#e67e22" },
+        { name: "노랑 (Yellow)", hex: "#f1c40f" },
+        { name: "초록 (Green)", hex: "#2ecc71" },
+        { name: "파랑 (Blue)", hex: "#3498db" },
+        { name: "보라 (Purple)", hex: "#9b59b6" },
+        { name: "흰색 (White)", hex: "#ecf0f1" },
+        { name: "회색 (Gray)", hex: "#95a5a6" },
+        { name: "검정 (Black)", hex: "#34495e" },
+        { name: "갈색 (Brown)", hex: "#7e5109" }
+    ];
+
+    let projects = {};
+    let currentProjectId = null;
+    let selectedPinNum = null;
+    let selectedColorHex = availableColors[0].hex;
+    let isBreadboardVisible = false;
+    let isSelectingBreadboardHole = false;
+
+    onValue(projectsRef, (snapshot) => {
+        projects = snapshot.val() || {};
+        renderProjectGrid();
+        if (currentProjectId && projects[currentProjectId]) {
+            renderGpioHeader();
+            renderVisualBreadboard();
+            renderSummaryTable();
+        }
+    });
+
+    function getCurrentDateTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    function toggleCustomAuthorInput(selectEl, customInputId) {
+        const customInput = document.getElementById(customInputId);
+        if (selectEl.value === 'custom') {
+            customInput.style.display = 'block';
+            customInput.focus();
+        } else {
+            customInput.style.display = 'none';
+        }
+    }
+
+    /* 브레드보드 표시/숨기기 토글 */
+    function toggleBreadboardView(forceShow = null) {
+        if (forceShow !== null) {
+            isBreadboardVisible = forceShow;
+        } else {
+            isBreadboardVisible = !isBreadboardVisible;
+        }
+
+        const card = document.getElementById('breadboardCard');
+        const btn = document.getElementById('toggleBbBtn');
+
+        if (isBreadboardVisible) {
+            card.style.display = 'block';
+            btn.innerText = '브레드보드 숨기기';
+            btn.className = 'btn btn-secondary';
+            renderVisualBreadboard();
+        } else {
+            card.style.display = 'none';
+            btn.innerText = '브레드보드 추가하기';
+            btn.className = 'btn btn-primary';
+        }
+    }
+
+    /* 좌표 선택 모드 시작 */
+    function startBreadboardSelection() {
+        if (!isBreadboardVisible) {
+            toggleBreadboardView(true);
+        }
+
+        isSelectingBreadboardHole = true;
+        document.getElementById('pinModal').style.display = 'none';
+        
+        const banner = document.getElementById('selectGuideBanner');
+        banner.style.display = 'flex';
+
+        const bbCard = document.getElementById('breadboardCard');
+        bbCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        bbCard.style.outline = '3px solid #2c8c4a';
+        bbCard.style.boxShadow = '0 0 15px rgba(44, 140, 74, 0.5)';
+    }
+
+    /* 좌표 선택 취소 */
+    function cancelBreadboardSelection() {
+        isSelectingBreadboardHole = false;
+        document.getElementById('selectGuideBanner').style.display = 'none';
+        
+        const bbCard = document.getElementById('breadboardCard');
+        bbCard.style.outline = 'none';
+        bbCard.style.boxShadow = '';
+
+        document.getElementById('pinModal').style.display = 'flex';
+    }
+
+    /* 브레드보드 구멍 클릭 핸들러 */
+    function onBreadboardHoleClick(posKey) {
+        if (isSelectingBreadboardHole) {
+            document.getElementById('pinBreadboardInput').value = posKey;
+            
+            isSelectingBreadboardHole = false;
+            document.getElementById('selectGuideBanner').style.display = 'none';
+
+            const bbCard = document.getElementById('breadboardCard');
+            bbCard.style.outline = 'none';
+            bbCard.style.boxShadow = '';
+
+            const modal = document.getElementById('pinModal');
+            modal.style.display = 'flex';
+
+            const input = document.getElementById('pinBreadboardInput');
+            input.style.backgroundColor = '#eaf5ed';
+            input.style.borderColor = 'var(--rpi-green)';
+            setTimeout(() => {
+                input.style.backgroundColor = '#f9f9f9';
+                input.style.borderColor = '';
+            }, 600);
+        } else {
+            alert(`선택한 위치: [${posKey}]\nGPIO 핀을 클릭한 후 '🎯 좌표 선택' 버튼을 누르면 이 구멍을 해당 핀에 입력할 수 있습니다.`);
+        }
+    }
+
+    function renderProjectGrid() {
+        const grid = document.getElementById('projectGrid');
+        grid.innerHTML = '';
+
+        const keys = Object.keys(projects);
+        if (keys.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:40px; color:#888;">
+                등록된 프로젝트가 없습니다. 상단의 '+ 새 프로젝트 생성' 버튼을 눌러 시작하세요!
+            </div>`;
+            return;
+        }
+
+        keys.forEach(id => {
+            const proj = projects[id];
+            const configuredPinsCount = Object.keys(proj.pins || {}).length;
+
+            const card = document.createElement('div');
+            card.className = 'project-card';
+            card.innerHTML = `
+                <div>
+                    <div class="project-title">${proj.title}</div>
+                    <div class="project-meta">
+                        작성자: <span class="author-badge">${proj.author}</span>
+                    </div>
+                    <div class="project-meta">
+                        ${proj.date}
+                    </div>
+                    <div class="project-meta" style="margin-top:8px;">
+                        연결된 핀: <b>${configuredPinsCount}개</b>
+                    </div>
+                </div>
+                <div class="card-actions">
+                    <button class="btn btn-primary" style="flex:1;" onclick="openProject('${id}')">열기</button>
+                    <button class="btn btn-danger" onclick="deleteProject('${id}')">삭제</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    function showHome() {
+        currentProjectId = null;
+        document.getElementById('detailView').classList.remove('active');
+        document.getElementById('homeView').classList.add('active');
+        document.getElementById('homeNewBtn').style.display = 'block';
+        renderProjectGrid();
+    }
+
+    function openNewProjectModal() {
+        document.getElementById('newProjTitleInput').value = '';
+        const select = document.getElementById('newProjAuthorSelect');
+        select.value = '권리호';
+        document.getElementById('newProjCustomAuthorInput').style.display = 'none';
+        document.getElementById('newProjCustomAuthorInput').value = '';
+        document.getElementById('newProjectModal').style.display = 'flex';
+    }
+
+    function saveNewProject() {
+        const title = document.getElementById('newProjTitleInput').value.trim();
+        const selectAuthor = document.getElementById('newProjAuthorSelect').value;
+        let author = selectAuthor;
+
+        if (selectAuthor === 'custom') {
+            author = document.getElementById('newProjCustomAuthorInput').value.trim();
+        }
+
+        if (!title) {
+            alert("프로젝트 이름을 입력해주세요.");
+            return;
+        }
+
+        if (!author) {
+            alert("작성자를 입력해주세요.");
+            return;
+        }
+
+        const id = 'proj_' + Date.now();
+        projects[id] = {
+            id: id,
+            title: title,
+            author: author,
+            date: getCurrentDateTime(),
+            pins: {}
+        };
+
+        saveToFirebase();
+        closeModal('newProjectModal');
+        openProject(id);
+    }
+
+    function deleteProject(id) {
+        if (confirm(`'${projects[id].title}' 프로젝트를 정말 삭제하시겠습니까?`)) {
+            delete projects[id];
+            saveToFirebase();
+            renderProjectGrid();
+        }
+    }
+
+    function openProject(id) {
+        currentProjectId = id;
+        const proj = projects[id];
+
+        document.getElementById('detailTitle').innerText = proj.title;
+        document.getElementById('detailAuthor').innerText = `${proj.author}`;
+        document.getElementById('detailDate').innerText = `최종 수정: ${proj.date}`;
+
+        document.getElementById('homeView').classList.remove('active');
+        document.getElementById('detailView').classList.add('active');
+        document.getElementById('homeNewBtn').style.display = 'none';
+
+        toggleBreadboardView(false);
+
+        renderGpioHeader();
+        renderVisualBreadboard();
+        renderSummaryTable();
+    }
+
+    function renderGpioHeader() {
+        const container = document.getElementById('gpioHeader');
+        container.innerHTML = '';
+        const currentPins = (projects[currentProjectId] && projects[currentProjectId].pins) || {};
+
+        for (let i = 0; i < 40; i += 2) {
+            const leftPin = pinDefinitions[i];
+            const rightPin = pinDefinitions[i+1];
+            
+            const leftData = currentPins[leftPin.num];
+            const rightData = currentPins[rightPin.num];
+
+            const row = document.createElement('div');
+            row.className = 'pin-row';
+            row.innerHTML = `
+                <div class="pin-label left">${leftPin.name}</div>
+                <div class="pin-node ${leftData ? 'configured' : ''}" 
+                     style="background-color: ${leftData ? leftData.color : '#555'}"
+                     onclick="openPinModal(${leftPin.num})">${leftPin.num}</div>
+                <div class="pin-node ${rightData ? 'configured' : ''}" 
+                     style="background-color: ${rightData ? rightData.color : '#555'}"
+                     onclick="openPinModal(${rightPin.num})">${rightPin.num}</div>
+                <div class="pin-label right">${rightPin.name}</div>
+            `;
+            container.appendChild(row);
+        }
+    }
+
+    /* 브레드보드 실시간 렌더링 */
+    function renderVisualBreadboard() {
+        const table = document.getElementById('visualBreadboardTable');
+        table.innerHTML = '';
+
+        const currentPins = (projects[currentProjectId] && projects[currentProjectId].pins) || {};
+        
+        const holeMap = {};
+        Object.keys(currentPins).forEach(pinNum => {
+            const pData = currentPins[pinNum];
+            if (pData.breadboard) {
+                const pos = pData.breadboard.toUpperCase().trim();
+                holeMap[pos] = {
+                    pinNum: pinNum,
+                    color: pData.color,
+                    label: pData.label
+                };
+            }
+        });
+
+        const rows = ['+', '-', 'A', 'B', 'C', 'D', 'E', 'divider', 'F', 'G', 'H', 'I', 'J', '+2', '-2'];
+        
+        let headerTr = document.createElement('tr');
+        headerTr.innerHTML = '<td></td>';
+        for (let c = 1; c <= 30; c++) {
+            headerTr.innerHTML += `<td class="bb-label">${c % 5 === 0 ? c : '.'}</td>`;
+        }
+        table.appendChild(headerTr);
+
+        rows.forEach(r => {
+            let tr = document.createElement('tr');
+            if (r === 'divider') {
+                tr.innerHTML = `<td colspan="31" class="bb-trench"></td>`;
+            } else {
+                let isPlus = (r === '+');
+                let isPlus2 = (r === '+2');
+                let isMinus = (r === '-');
+                let isMinus2 = (r === '-2');
+                
+                let labelTd = '';
+                if (isPlus || isPlus2) labelTd = `<span class="bb-rail-plus">+</span>`;
+                else if (isMinus || isMinus2) labelTd = `<span class="bb-rail-minus">-</span>`;
+                else labelTd = `<span class="bb-label">${r}</span>`;
+
+                tr.innerHTML = `<td>${labelTd}</td>`;
+
+                for (let c = 1; c <= 30; c++) {
+                    let specificKey = '';
+                    let railKey = null;
+
+                    if (isPlus) { specificKey = `+${c}`; railKey = '+'; }
+                    else if (isMinus) { specificKey = `-${c}`; railKey = '-'; }
+                    else if (isPlus2) { specificKey = `+2-${c}`; railKey = '+2'; }
+                    else if (isMinus2) { specificKey = `-2-${c}`; railKey = '-2'; }
+                    else { specificKey = `${r}${c}`; }
+
+                    let mapped = holeMap[specificKey] || (railKey ? holeMap[railKey] : null);
+
+                    let holeTd = document.createElement('td');
+                    let holeDiv = document.createElement('div');
+                    holeDiv.className = 'bb-hole';
+                    
+                    if (mapped) {
+                        holeDiv.classList.add('active-wire');
+                        holeDiv.style.backgroundColor = mapped.color;
+                        holeDiv.innerText = mapped.pinNum;
+                        holeDiv.title = `Pin ${mapped.pinNum}: ${mapped.label} (${specificKey})`;
+                    }
+
+                    holeDiv.onclick = () => onBreadboardHoleClick(specificKey);
+                    holeTd.appendChild(holeDiv);
+                    tr.appendChild(holeTd);
+                }
+            }
+            table.appendChild(tr);
+        });
+    }
+
+    function renderColorPicker() {
+        const picker = document.getElementById('colorPicker');
+        picker.innerHTML = '';
+        availableColors.forEach(c => {
+            const opt = document.createElement('div');
+            opt.className = `color-option ${c.hex === selectedColorHex ? 'selected' : ''}`;
+            opt.style.backgroundColor = c.hex;
+            opt.title = c.name;
+            opt.onclick = () => {
+                selectedColorHex = c.hex;
+                document.querySelectorAll('.color-option').forEach(el => el.classList.remove('selected'));
+                opt.classList.add('selected');
+            };
+            picker.appendChild(opt);
+        });
+    }
+
+    function openPinModal(pinNum) {
+        selectedPinNum = pinNum;
+        const pinDef = pinDefinitions.find(p => p.num === pinNum);
+        const existingData = projects[currentProjectId].pins ? projects[currentProjectId].pins[pinNum] : null;
+
+        document.getElementById('pinModalTitle').innerText = `Pin ${pinNum} (${pinDef.name}) 설정`;
+        document.getElementById('pinLabelInput').value = existingData ? existingData.label : '';
+        document.getElementById('pinBreadboardInput').value = existingData ? (existingData.breadboard || '') : '';
+        
+        selectedColorHex = existingData ? existingData.color : availableColors[0].hex;
+        renderColorPicker();
+
+        document.getElementById('pinModal').style.display = 'flex';
+    }
+
+    function savePinData() {
+        const label = document.getElementById('pinLabelInput').value.trim();
+        const breadboard = document.getElementById('pinBreadboardInput').value.trim();
+        
+        if (!projects[currentProjectId].pins) {
+            projects[currentProjectId].pins = {};
+        }
+
+        if (label || breadboard || selectedColorHex) {
+            projects[currentProjectId].pins[selectedPinNum] = {
+                color: selectedColorHex,
+                breadboard: breadboard || '미지정',
+                label: label || '연결됨'
+            };
+            projects[currentProjectId].date = getCurrentDateTime();
+        }
+
+        saveToFirebase();
+        closeModal('pinModal');
+        
+        document.getElementById('detailDate').innerText = `최종 수정: ${projects[currentProjectId].date}`;
+        renderGpioHeader();
+        renderVisualBreadboard();
+        renderSummaryTable();
+    }
+
+    function clearPinData() {
+        if (projects[currentProjectId].pins && projects[currentProjectId].pins[selectedPinNum]) {
+            delete projects[currentProjectId].pins[selectedPinNum];
+            projects[currentProjectId].date = getCurrentDateTime();
+            saveToFirebase();
+        }
+        closeModal('pinModal');
+        
+        document.getElementById('detailDate').innerText = `최종 수정: ${projects[currentProjectId].date}`;
+        renderGpioHeader();
+        renderVisualBreadboard();
+        renderSummaryTable();
+    }
+
+    function renderSummaryTable() {
+        const tbody = document.getElementById('summaryTableBody');
+        tbody.innerHTML = '';
+        
+        const currentPins = (projects[currentProjectId] && projects[currentProjectId].pins) || {};
+        const pinKeys = Object.keys(currentPins).sort((a,b) => a - b);
+
+        if (pinKeys.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">설정된 핀이 없습니다.</td></tr>';
+            return;
+        }
+
+        pinKeys.forEach(pinNum => {
+            const pinDef = pinDefinitions.find(p => p.num == pinNum);
+            const data = currentPins[pinNum];
+            const colorObj = availableColors.find(c => c.hex === data.color) || { name: '지정 색상' };
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>Pin ${pinNum}</b></td>
+                <td>${pinDef.name}</td>
+                <td><span class="color-badge" style="background-color: ${data.color}"></span>${colorObj.name}</td>
+                <td><span class="breadboard-tag">${data.breadboard || '-'}</span></td>
+                <td>${data.label}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    function saveToFirebase() {
+        set(projectsRef, projects);
+    }
+
+    function exportData() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(projects, null, 2));
+        const downloadAnchor = document.createElement('a');
+        downloadAnchor.setAttribute("href", dataStr);
+        downloadAnchor.setAttribute("download", `rpi_pinmap_backup_${Date.now()}.json`);
+        document.body.appendChild(downloadAnchor);
+        downloadAnchor.click();
+        downloadAnchor.remove();
+    }
+
+    function triggerImport() {
+        document.getElementById('importFileInput').click();
+    }
+
+    function importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const importedProjects = JSON.parse(e.target.result);
+                if (typeof importedProjects === 'object') {
+                    projects = Object.assign(projects, importedProjects);
+                    saveToFirebase();
+                    alert('프로젝트 데이터를 성공적으로 불러왔습니다!');
+                } else {
+                    alert('올바르지 않은 백업 파일 형태입니다.');
+                }
+            } catch (err) {
+                alert('JSON 파일을 읽는 동안 오류가 발생했습니다.');
+            }
+        };
+        reader.readAsText(file);
+        event.target.value = '';
+    }
+
+    // HTML 버튼 이벤트를 위한 window 전역 등록
+    window.showHome = showHome;
+    window.openNewProjectModal = openNewProjectModal;
+    window.saveNewProject = saveNewProject;
+    window.deleteProject = deleteProject;
+    window.openProject = openProject;
+    window.openPinModal = openPinModal;
+    window.savePinData = savePinData;
+    window.clearPinData = clearPinData;
+    window.closeModal = closeModal;
+    window.toggleCustomAuthorInput = toggleCustomAuthorInput;
+    window.exportData = exportData;
+    window.triggerImport = triggerImport;
+    window.importData = importData;
+    window.toggleBreadboardView = toggleBreadboardView;
+    window.startBreadboardSelection = startBreadboardSelection;
+    window.cancelBreadboardSelection = cancelBreadboardSelection;
+
+    renderColorPicker();
+</script>

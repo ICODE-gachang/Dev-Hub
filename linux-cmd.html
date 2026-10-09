@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>I_CODE - 리눅스 명령어 모음</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --rpi-green: #2c8c4a;
+            --rpi-dark-green: #1e5e32;
+            --code-bg: #1e1e1e;
+            --custom-accent: #f39c12;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        header {
+            background: #ffffff;
+            padding: 16px 30px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        header h2 {
+            margin: 0;
+            font-size: 20px;
+            color: #111;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-btn-group {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 8px 14px;
+            border-radius: 6px;
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: bold;
+            border: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary {
+            background: #fff;
+            color: #444;
+        }
+
+        .btn-secondary:hover {
+            background: #f0f0f0;
+        }
+
+        .btn-primary {
+            background: var(--rpi-green);
+            color: #fff;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--rpi-dark-green);
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .tab-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            padding: 10px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            border: none;
+            background: transparent;
+            color: #666;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--rpi-green);
+            color: #fff;
+        }
+
+        .tab-btn-custom.active {
+            background: var(--custom-accent);
+            color: #fff;
+        }
+
+        .controls-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .search-box {
+            flex: 1;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 12px 18px;
+            font-size: 15px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            box-sizing: border-box;
+            outline: none;
+        }
+
+        .search-box input:focus {
+            border-color: var(--rpi-green);
+        }
+
+        .category-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin: 30px 0 14px 0;
+            color: #222;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 2px solid var(--rpi-green);
+            padding-bottom: 6px;
+        }
+
+        .category-title.custom-title {
+            border-bottom-color: var(--custom-accent);
+        }
+
+        .cmd-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(440px, 1fr));
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .cmd-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .cmd-card {
+            background: var(--card-bg);
+            border-radius: 10px;
+            padding: 16px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .cmd-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .cmd-name {
+            font-weight: bold;
+            font-size: 15px;
+            color: #111;
+        }
+
+        .cmd-desc {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .code-block {
+            background: var(--code-bg);
+            color: #4af626;
+            font-family: 'Consolas', 'Courier New', monospace;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            word-break: break-all;
+        }
+
+        .copy-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #aaa;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+
+        .copy-btn:hover {
+            background: rgba(255,255,255,0.2);
+            color: #fff;
+        }
+
+        .delete-card-btn {
+            background: none;
+            border: none;
+            color: #ccc;
+            cursor: pointer;
+            font-size: 14px;
+            padding: 0 4px;
+        }
+
+        .delete-card-btn:hover {
+            color: #e74c3c;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: #fff;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .modal-content h3 {
+            margin-top: 0;
+            color: #111;
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: bold;
+            margin-bottom: 6px;
+            color: #444;
+        }
+
+        .form-group input, .form-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+            box-sizing: border-box;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            height: 70px;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- 로그인 모달 UI -->
+    <div id="login-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:99999;">
+        <div style="background:#ffffff; padding:30px; border-radius:12px; text-align:center; max-width:320px; width:90%; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+            <h3 style="margin-top:0; color:#333;">🔒 로그인</h3>
+            <p style="font-size:14px; color:#666; margin-bottom:15px;">허가된 이메일과 비밀번호를 입력하세요.</p>
+            
+            <!-- autocomplete="off" 추가 -->
+            <input type="email" id="login-email" placeholder="이메일" autocomplete="off" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            
+            <!-- autocomplete="new-password" 추가 -->
+            <input type="password" id="login-password" placeholder="비밀번호" autocomplete="new-password" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            
+            <button onclick="login()" style="width:100%; padding:10px; background:#007bff; color:white; border:none; border-radius:6px; font-size:16px; cursor:pointer;">로그인</button>
+            <p id="login-error" style="color:red; font-size:13px; display:none; margin-top:10px; margin-bottom:0;"></p>
+        </div>
+    </div>
+
+<header>
+    <h2>💻 리눅스 명령어 모음</h2>
+    <div class="header-btn-group">
+        <a href="index.html" class="btn btn-secondary">🏠 메인</a>
+        <a href="RPi-PinMap.html" class="btn btn-secondary">📌 핀 맵 매니저</a>
+        <a href="ApiKey-Manager.html" class="btn btn-secondary">🔑 API 키 매니저</a>
+        <a href="sensor-lib.html" class="btn btn-secondary">🔌 센서 라이브러리</a>
+        <a href="file-archive.html" class="btn btn-secondary">📁 파일 아카이브</a>
+    </div>
+</header>
+
+<div class="container">
+    <div class="tab-group">
+        <button class="tab-btn active" onclick="switchTab('basic')">📖 기본 명령어 리스트</button>
+        <button class="tab-btn tab-btn-custom" onclick="switchTab('custom')">⚡ I_CODE 커스텀</button>
+    </div>
+
+    <div class="controls-row">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="명령어 또는 설명 검색..." onkeyup="filterCommands()">
+        </div>
+        <button id="addCustomBtn" class="btn btn-primary" style="display:none; background: var(--custom-accent);" onclick="openModal()">
+            + 커스텀 명령어 등록
+        </button>
+    </div>
+
+    <!-- TAB 1: 기본 명령어 리스트 -->
+    <div id="tab-basic" class="tab-content active">
+        <div class="category-section">
+            <div class="category-title">🍓 라즈베리파이 & 하드웨어 제어</div>
+            <div class="cmd-grid">
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">핀 상태 확인 (pinout)</div>
+                        <div class="cmd-desc">라즈베리파이 헤더의 GPIO 핀 보드 번호와 배치도를 시각적으로 보여줍니다.</div>
+                    </div>
+                    <div class="code-block"><code>pinout</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">라즈베리파이 메인 설정</div>
+                        <div class="cmd-desc">I2C, SPI, SSH, 비밀번호, 와이파이 설정 등을 구성하는 GUI 메뉴입니다.</div>
+                    </div>
+                    <div class="code-block"><code>sudo raspi-config</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">I2C 센서 주소 스캔</div>
+                        <div class="cmd-desc">연결된 I2C 센서들의 하드웨어 헥사 주소(예: 0x27)를 탐색합니다.</div>
+                    </div>
+                    <div class="code-block"><code>sudo i2cdetect -y 1</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">CPU 온도 확인</div>
+                        <div class="cmd-desc">라즈베리파이 CPU의 실시간 온도를 섭씨(°C) 단위로 출력합니다.</div>
+                    </div>
+                    <div class="code-block"><code>vcgencmd measure_temp</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">전압 부족 및 스로틀링 상태 확인</div>
+                        <div class="cmd-desc">어댑터 전압 부족 경고(Under-voltage) 이력을 점검합니다. (0x0이면 정상)</div>
+                    </div>
+                    <div class="code-block"><code>vcgencmd get_throttled</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="category-section">
+            <div class="category-title">📂 파일 & 디렉토리 탐색/조작</div>
+            <div class="cmd-grid">
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">현재 위치 확인 (pwd)</div>
+                        <div class="cmd-desc">현재 작업 중인 디렉토리의 절대 경로를 표시합니다.</div>
+                    </div>
+                    <div class="code-block"><code>pwd</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">숨김파일 포함 상세 목록 (ls)</div>
+                        <div class="cmd-desc">권한, 소유자, 파일 용량, 수정 날짜 및 숨김 파일(.으로 시작)을 모두 출력합니다.</div>
+                    </div>
+                    <div class="code-block"><code>ls -la</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">디렉토리 이동 (cd)</div>
+                        <div class="cmd-desc">원하는 디렉토리로 이동하거나 상위 디렉토리(..)로 이동합니다.</div>
+                    </div>
+                    <div class="code-block"><code>cd /path/to/folder</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">하위 폴더까지 한 번에 생성 (mkdir)</div>
+                        <div class="cmd-desc">경로상의 모든 하위 폴더를 자동으로 함께 만듭니다.</div>
+                    </div>
+                    <div class="code-block"><code>mkdir -p parent/child/folder</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">강제 전체 삭제 (rm)</div>
+                        <div class="cmd-desc">폴더와 하위 모든 파일을 확인 절차 없이 즉시 강제 삭제합니다. (주의!)</div>
+                    </div>
+                    <div class="code-block"><code>rm -rf 폴더/파일이름</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">실행 권한 부여 (chmod)</div>
+                        <div class="cmd-desc">파이썬 또는 쉘 스크립트 파일에 직접 실행 권한(+x)을 부여합니다.</div>
+                    </div>
+                    <div class="code-block"><code>chmod +x script.py</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="category-section">
+            <div class="category-title">🌐 네트워크 & 통신</div>
+            <div class="cmd-grid">
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">내 IP 주소 빠르게 확인</div>
+                        <div class="cmd-desc">라즈베리파이에 할당된 무선(wlan0) 및 유선(eth0) IP 주소를 확인합니다.</div>
+                    </div>
+                    <div class="code-block"><code>hostname -I</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">SSH 원격 접속하기</div>
+                        <div class="cmd-desc">PC 터미널에서 라즈베리파이로 보안 원격 세션을 연결합니다.</div>
+                    </div>
+                    <div class="code-block"><code>ssh pi@192.168.0.X</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">네트워크 연결 상태 체크 (Ping)</div>
+                        <div class="cmd-desc">외부 서버와의 인터넷 연결 상태를 패킷 송수신으로 테스트합니다.</div>
+                    </div>
+                    <div class="code-block"><code>ping -c 4 google.com</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="category-section">
+            <div class="category-title">⚙️ 시스템 관리 & 파이썬</div>
+            <div class="cmd-grid">
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">OS 시스템 패키지 업데이트</div>
+                        <div class="cmd-desc">패키지 목록 최신화 후 설치된 프로그램을 최신 버전으로 올립니다.</div>
+                    </div>
+                    <div class="code-block"><code>sudo apt update && sudo apt upgrade -y</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">파이썬 가상환경 생성 및 활성화</div>
+                        <div class="cmd-desc">프로젝트별 독립된 파이썬 라이브러리 가상환경(venv)을 구축합니다.</div>
+                    </div>
+                    <div class="code-block"><code>python3 -m venv venv && source venv/bin/activate</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">실시간 리소스 및 프로세스 모니터링</div>
+                        <div class="cmd-desc">CPU, 메모리 사용량 및 동작 중인 프로세스를 모니터링합니다.</div>
+                    </div>
+                    <div class="code-block"><code>htop</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+                <div class="cmd-card">
+                    <div>
+                        <div class="cmd-name">안전한 시스템 재부팅</div>
+                        <div class="cmd-desc">라즈베리파이 시스템을 재부팅합니다.</div>
+                    </div>
+                    <div class="code-block"><code>sudo reboot</code><button class="copy-btn" onclick="copyCode(this)">복사</button></div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- TAB 2: I_CODE 커스텀 (Firebase 연동) -->
+    <div id="tab-custom" class="tab-content">
+        <div class="category-section">
+            <div class="category-title custom-title">⚡ 팀원 등록 커스텀 명령어</div>
+            <div id="customCmdGrid" class="cmd-grid"></div>
+        </div>
+    </div>
+</div>
+
+<div id="cmdModal" class="modal-overlay">
+    <div class="modal-content">
+        <h3>⚡ I_CODE 커스텀 명령어 등록</h3>
+        <div class="form-group">
+            <label>명령어 이름 / 목적</label>
+            <input type="text" id="modalTitle" placeholder="예: GPIO 실시간 모니터링 스크립트 실행">
+        </div>
+        <div class="form-group">
+            <label>설명</label>
+            <textarea id="modalDesc" placeholder="이 명령어의 기능 및 주의사항을 적어주세요."></textarea>
+        </div>
+        <div class="form-group">
+            <label>실행 코드 (Terminal Command)</label>
+            <input type="text" id="modalCmd" placeholder="예: python3 ~/scripts/gpio_monitor.py">
+        </div>
+        <div class="modal-actions">
+            <button class="btn btn-secondary" onclick="closeModal()">취소</button>
+            <button class="btn btn-primary" style="background: var(--custom-accent);" onclick="saveCustomCommand()">등록하기</button>
+        </div>
+    </div>
+</div>
+
+<script type="module">
+    // 외부 설정 파일 및 파이어베이스 모듈 임포트 (중복 제거 완료)
+    import { firebaseConfig } from './firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, push, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // 1. Firebase 앱, 데이터베이스 및 Auth 객체 초기화 (1회만 선언)
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    // 2. 브라우저 창/탭을 닫으면 로그인이 풀리도록 세션 유지 설정
+    setPersistence(auth, browserSessionPersistence)
+        .catch((error) => {
+            console.error("Persistence 설정 오류:", error);
+        });
+
+    const customCmdRef = ref(db, 'custom_linux_cmds');
+
+    // 2. 로그인 상태 감지 (로그인 시 모달 닫기)
+    onAuthStateChanged(auth, (user) => {
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) {
+            if (user) {
+                loginModal.style.display = 'none';
+            } else {
+                loginModal.style.display = 'flex';
+            }
+        }
+    });
+
+    // 3. 로그인 함수 정의
+    window.login = function() {
+        const emailInput = document.getElementById('login-email');
+        const passwordInput = document.getElementById('login-password');
+        const errorMsg = document.getElementById('login-error');
+
+        if (!emailInput || !passwordInput) return;
+
+        const email = emailInput.value;
+        const password = passwordInput.value;
+
+        signInWithEmailAndPassword(auth, email, password)
+            .then(() => {
+                if (errorMsg) errorMsg.style.display = 'none';
+            })
+            .catch((error) => {
+                if (errorMsg) {
+                    errorMsg.innerText = "로그인 실패: " + error.message;
+                    errorMsg.style.display = 'block';
+                }
+            });
+    };
+
+    // 4. 커스텀 명령어 실시간 데이터 수신
+    onValue(customCmdRef, (snapshot) => {
+        const data = snapshot.val();
+        const grid = document.getElementById('customCmdGrid');
+        if (!grid) return;
+        
+        grid.innerHTML = '';
+
+        if (!data) {
+            grid.innerHTML = '<div style="color:#888; grid-column:1/-1; padding:20px 0; text-align:center;">등록된 커스텀 명령어가 없습니다. 우측 상단의 [커스텀 명령어 등록] 버튼을 눌러 추가해보세요!</div>';
+            return;
+        }
+
+        Object.keys(data).forEach(id => {
+            const item = data[id];
+            const card = document.createElement('div');
+            card.className = 'cmd-card';
+            card.innerHTML = `
+                <div>
+                    <div class="cmd-header">
+                        <div class="cmd-name">${escapeHtml(item.title)}</div>
+                        <button class="delete-card-btn" onclick="deleteCustomCmd('${id}')" title="삭제">✕</button>
+                    </div>
+                    <div class="cmd-desc">${escapeHtml(item.desc || '')}</div>
+                </div>
+                <div class="code-block">
+                    <code>${escapeHtml(item.cmd)}</code>
+                    <button class="copy-btn" onclick="copyCode(this)">복사</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+
+        filterCommands();
+    });
+
+    window.saveCustomCommand = function() {
+        const title = document.getElementById('modalTitle').value.trim();
+        const desc = document.getElementById('modalDesc').value.trim();
+        const cmd = document.getElementById('modalCmd').value.trim();
+
+        if (!title || !cmd) {
+            alert('명령어 이름과 실행 코드는 필수 항목입니다.');
+            return;
+        }
+
+        push(customCmdRef, {
+            title: title,
+            desc: desc,
+            cmd: cmd,
+            timestamp: Date.now()
+        }).then(() => {
+            closeModal();
+            document.getElementById('modalTitle').value = '';
+            document.getElementById('modalDesc').value = '';
+            document.getElementById('modalCmd').value = '';
+        });
+    };
+
+    window.deleteCustomCmd = function(id) {
+        if (confirm('이 커스텀 명령어를 삭제하시겠습니까?')) {
+            remove(ref(db, `custom_linux_cmds/${id}`));
+        }
+    };
+</script>
+
+<script>
+    function switchTab(tabName) {
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+        if (tabName === 'basic') {
+            document.querySelectorAll('.tab-btn')[0].classList.add('active');
+            document.getElementById('tab-basic').classList.add('active');
+            document.getElementById('addCustomBtn').style.display = 'none';
+        } else {
+            document.querySelectorAll('.tab-btn')[1].classList.add('active');
+            document.getElementById('tab-custom').classList.add('active');
+            document.getElementById('addCustomBtn').style.display = 'inline-block';
+        }
+        filterCommands();
+    }
+
+    function openModal() {
+        document.getElementById('cmdModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('cmdModal').style.display = 'none';
+    }
+
+    function copyCode(btn) {
+        const codeText = btn.previousElementSibling.innerText;
+        navigator.clipboard.writeText(codeText).then(() => {
+            const originalText = btn.innerText;
+            btn.innerText = '복사됨!';
+            btn.style.background = '#2c8c4a';
+            btn.style.color = '#fff';
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.background = 'rgba(255,255,255,0.1)';
+                btn.style.color = '#aaa';
+            }, 1500);
+        });
+    }
+
+    function filterCommands() {
+        const query = document.getElementById('searchInput').value.toLowerCase();
+        const activeTab = document.querySelector('.tab-content.active');
+        if (!activeTab) return;
+
+        const cards = activeTab.querySelectorAll('.cmd-card');
+        const sections = activeTab.querySelectorAll('.category-section');
+
+        cards.forEach(card => {
+            const text = card.innerText.toLowerCase();
+            if (text.includes(query)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        sections.forEach(section => {
+            const visibleCards = section.querySelectorAll('.cmd-card[style*="display: flex"], .cmd-card:not([style*="display"])');
+            if (visibleCards.length === 0 && query !== '') {
+                section.style.display = 'none';
+            } else {
+                section.style.display = 'block';
+            }
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+</script>
+
+</body>
+</html>

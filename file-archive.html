@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파일 아카이브 매니저</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --border-color: #e0e0e0;
+            --rpi-green: #2c8c4a;
+            --rpi-dark-green: #1e5e32;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1280px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 15px 24px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .header-btn-group {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        h2, h3, h4 { margin: 0; }
+
+        .btn {
+            padding: 9px 16px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            transition: background-color 0.2s, transform 0.1s;
+        }
+
+        .btn:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background-color: var(--rpi-green);
+            color: white;
+        }
+        .btn-primary:hover { background-color: var(--rpi-dark-green); }
+
+        .btn-secondary {
+            background-color: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover { background-color: #5a6268; }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+        .btn-danger:hover { background-color: #bd2130; }
+
+        .btn-icon {
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 4px;
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+        }
+
+        .search-input, .category-select {
+            padding: 10px 14px;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 14px;
+            background: white;
+        }
+
+        .search-input { flex: 1; min-width: 200px; }
+
+        .file-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 20px;
+        }
+
+        .file-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            border: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            gap: 14px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .file-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .file-name {
+            font-size: 16px;
+            font-weight: bold;
+            color: #111;
+            word-break: break-all;
+        }
+
+        .category-badge {
+            background: #eef2ff;
+            color: #4f46e5;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+
+        .author-badge {
+            display: inline-block;
+            background: #eaf5ed;
+            color: var(--rpi-green);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .file-info-box {
+            background: #f8f9fa;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            padding: 10px 12px;
+            font-size: 13px;
+            color: #555;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .note-text {
+            font-size: 13px;
+            color: #555;
+            background: #f8f9fa;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border-left: 3px solid var(--rpi-green);
+            line-height: 1.4;
+        }
+
+        .meta-info {
+            font-size: 12px;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 12px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.4);
+            justify-content: center;
+            align-items: center;
+            z-index: 200;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 440px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+        }
+
+        .modal-content label {
+            font-size: 13px;
+            font-weight: bold;
+            color: #555;
+            margin-bottom: 4px;
+            display: block;
+        }
+
+        .modal-content input, .modal-content select, .modal-content textarea {
+            width: 100%;
+            padding: 9px 12px;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .modal-content textarea { resize: vertical; height: 70px; }
+
+        #toast {
+            visibility: hidden;
+            min-width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 20px;
+            padding: 10px 16px;
+            position: fixed;
+            z-index: 300;
+            left: 50%;
+            bottom: 30px;
+            transform: translateX(-50%);
+            font-size: 14px;
+        }
+
+        #toast.show {
+            visibility: visible;
+            animation: fadein 0.3s, fadeout 0.5s 2s;
+        }
+
+        @keyframes fadein { from { bottom: 0; opacity: 0; } to { bottom: 30px; opacity: 1; } }
+        @keyframes fadeout { from { bottom: 30px; opacity: 1; } to { bottom: 0; opacity: 0; } }
+    </style>
+</head>
+<body>
+    <!-- 🟢 로그인 모달 UI -->
+    <div id="login-modal" style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); display:none; align-items:center; justify-content:center; z-index:99999;">
+        <div style="background:#ffffff; padding:30px; border-radius:12px; text-align:center; max-width:320px; width:90%; box-shadow:0 4px 15px rgba(0,0,0,0.3);">
+            <h3 style="margin-top:0; color:#333;">🔒 로그인</h3>
+            <p style="font-size:14px; color:#666; margin-bottom:15px;">허가된 이메일과 비밀번호를 입력하세요.</p>
+            
+            <input type="email" id="login-email" placeholder="이메일" autocomplete="off" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            <input type="password" id="login-password" placeholder="비밀번호" autocomplete="new-password" style="width:100%; padding:10px; margin-bottom:10px; border:1px solid #ccc; border-radius:6px; box-sizing:border-box;">
+            
+            <button onclick="login()" style="width:100%; padding:10px; background:#007bff; color:white; border:none; border-radius:6px; font-size:16px; cursor:pointer;">로그인</button>
+            <p id="login-error" style="color:red; font-size:13px; display:none; margin-top:10px; margin-bottom:0;"></p>
+        </div>
+    </div>
+
+<header>
+    <h2>📁 파일 아카이브 매니저</h2>
+    <div class="header-btn-group">
+        <a href="index.html" class="btn btn-secondary">🏠 메인</a>
+        <a href="RPi-PinMap.html" class="btn btn-secondary">📌 핀 맵 매니저</a>
+        <a href="ApiKey-Manager.html" class="btn btn-secondary">🔑 API 키 매니저</a>
+        <a href="sensor-lib.html" class="btn btn-secondary">🔌 센서 라이브러리</a>
+        <a href="linux-cmd.html" class="btn btn-secondary">💻 리눅스 명령어</a>
+        <button class="btn btn-primary" onclick="openUploadModal()">🔗 새 링크 등록</button>
+    </div>
+</header>
+
+<div class="container">
+    <div class="toolbar">
+        <input type="text" id="searchInput" class="search-input" placeholder="파일명, 작성자, 설명 검색..." oninput="renderFileGrid()">
+        <select id="categoryFilter" class="category-select" onchange="renderFileGrid()">
+            <option value="all">전체 카테고리</option>
+            <option value="문서/보고서">문서/보고서</option>
+            <option value="코드/스크립트">코드/스크립트</option>
+            <option value="회로도/데이터시트">회로도/데이터시트</option>
+            <option value="압축파일">압축파일</option>
+            <option value="기타">기타</option>
+        </select>
+    </div>
+
+    <div class="file-grid" id="fileGrid"></div>
+</div>
+
+<!-- 링크 등록 모달 -->
+<div class="modal" id="uploadModal">
+    <div class="modal-content">
+        <h3>새 파일 링크 등록</h3>
+        
+        <div>
+            <label>파일명 (제목):</label>
+            <input type="text" id="fileNameInput" placeholder="예: Raspi_Sensor_DataSheet.pdf">
+        </div>
+
+        <div>
+            <label>다운로드 URL 링크:</label>
+            <input type="url" id="fileUrlInput" placeholder="https://drive.google.com/... 또는 https://github.com/...">
+        </div>
+
+        <div>
+            <label>카테고리:</label>
+            <select id="categorySelect">
+                <option value="문서/보고서">문서/보고서</option>
+                <option value="코드/스크립트">코드/스크립트</option>
+                <option value="회로도/데이터시트">회로도/데이터시트</option>
+                <option value="압축파일">압축파일</option>
+                <option value="기타">기타</option>
+            </select>
+        </div>
+
+        <div>
+            <label>작성자 :</label>
+            <select id="authorSelect" onchange="toggleCustomAuthorInput(this, 'customAuthorInput')">
+                <option value="권리호">권리호</option>
+                <option value="김정한">김정한</option>
+                <option value="임창희">임창희</option>
+                <option value="장신우">장신우</option>
+                <option value="손동아">손동아 선생님</option>
+                <option value="custom">+ 직접 입력</option>
+            </select>
+            <input type="text" id="customAuthorInput" placeholder="작성자 이름 입력" style="display:none; margin-top:6px;">
+        </div>
+
+        <div>
+            <label>설명 및 메모:</label>
+            <textarea id="noteInput" placeholder="파일 용도 및 관련 설명 작성"></textarea>
+        </div>
+
+        <div style="display:flex; justify-content:flex-end; gap:8px; margin-top:10px;">
+            <button class="btn btn-primary" id="saveBtn" onclick="saveFileRecord()">저장</button>
+            <button class="btn btn-secondary" onclick="closeModal('uploadModal')">취소</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast">메시지</div>
+
+<script type="module">
+    import { firebaseConfig } from './firebase-config.js';
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref as dbRef, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, setPersistence, browserSessionPersistence } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+    // Firebase 앱, 데이터베이스, 인증 객체 초기화 (Storage 모듈 제거)
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    setPersistence(auth, browserSessionPersistence).catch((error) => {
+        console.error("Persistence 설정 오류:", error);
+    });
+
+    const archiveDbRef = dbRef(db, 'file_archive');
+    let archiveData = {};
+
+    onAuthStateChanged(auth, (user) => {
+        const loginModal = document.getElementById('login-modal');
+        if (loginModal) {
+            loginModal.style.display = user ? 'none' : 'flex';
+        }
+    });
+
+    window.login = function() {
+        const emailInput = document.getElementById('login-email');
+        const passwordInput = document.getElementById('login-password');
+        const errorMsg = document.getElementById('login-error');
+
+        if (!emailInput || !passwordInput) return;
+
+        signInWithEmailAndPassword(auth, emailInput.value, passwordInput.value)
+            .then(() => { if (errorMsg) errorMsg.style.display = 'none'; })
+            .catch((error) => {
+                if (errorMsg) {
+                    errorMsg.innerText = "로그인 실패: " + error.message;
+                    errorMsg.style.display = 'block';
+                }
+            });
+    };
+
+    onValue(archiveDbRef, (snapshot) => {
+        archiveData = snapshot.val() || {};
+        renderFileGrid();
+    });
+
+    function getCurrentDateTime() {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${minutes}`;
+    }
+
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        if (!toast) return;
+        toast.innerText = message;
+        toast.className = "show";
+        setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 2200);
+    }
+
+    function toggleCustomAuthorInput(selectEl, customInputId) {
+        const customInput = document.getElementById(customInputId);
+        if (selectEl.value === 'custom') {
+            customInput.style.display = 'block';
+            customInput.focus();
+        } else {
+            customInput.style.display = 'none';
+        }
+    }
+
+    function openUploadModal() {
+        document.getElementById('fileNameInput').value = '';
+        document.getElementById('fileUrlInput').value = '';
+        document.getElementById('noteInput').value = '';
+        document.getElementById('categorySelect').value = '문서/보고서';
+        document.getElementById('authorSelect').value = '권리호';
+        document.getElementById('customAuthorInput').style.display = 'none';
+        document.getElementById('uploadModal').style.display = 'flex';
+    }
+
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    function saveFileRecord() {
+        const fileName = document.getElementById('fileNameInput').value.trim();
+        const downloadUrl = document.getElementById('fileUrlInput').value.trim();
+
+        if (!fileName) {
+            alert('파일명을 입력하세요.');
+            return;
+        }
+
+        if (!downloadUrl || !downloadUrl.startsWith('http')) {
+            alert('올바른 URL 링크(http:// 또는 https://)를 입력하세요.');
+            return;
+        }
+
+        const category = document.getElementById('categorySelect').value;
+        const note = document.getElementById('noteInput').value.trim();
+        const authorSelect = document.getElementById('authorSelect').value;
+        const author = authorSelect === 'custom' ? document.getElementById('customAuthorInput').value.trim() : authorSelect;
+
+        if (!author) {
+            alert('작성자를 입력해주세요.');
+            return;
+        }
+
+        const fileId = 'file_' + Date.now();
+        const fileRecord = {
+            id: fileId,
+            fileName: fileName,
+            downloadUrl: downloadUrl,
+            category: category,
+            author: author,
+            note: note,
+            date: getCurrentDateTime()
+        };
+
+        set(dbRef(db, `file_archive/${fileId}`), fileRecord).then(() => {
+            closeModal('uploadModal');
+            showToast('🔗 링크가 성공적으로 등록되었습니다.');
+        }).catch((error) => {
+            alert('저장 중 오류 발생: ' + error.message);
+        });
+    }
+
+    function deleteFile(fileId) {
+        const item = archiveData[fileId];
+        if (!item) return;
+
+        if (confirm(`'${item.fileName}' 기록을 삭제하시겠습니까?`)) {
+            remove(dbRef(db, `file_archive/${fileId}`)).then(() => {
+                showToast('🗑️ 기록이 삭제되었습니다.');
+            });
+        }
+    }
+
+    function renderFileGrid() {
+        const grid = document.getElementById('fileGrid');
+        if (!grid) return;
+        grid.innerHTML = '';
+
+        const searchInput = document.getElementById('searchInput');
+        const categoryFilter = document.getElementById('categoryFilter');
+
+        const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
+        const selectedCategory = categoryFilter ? categoryFilter.value : 'all';
+
+        const keys = Object.keys(archiveData);
+
+        const filteredKeys = keys.filter(id => {
+            const item = archiveData[id];
+            const matchSearch = item.fileName.toLowerCase().includes(searchQuery) ||
+                                (item.note && item.note.toLowerCase().includes(searchQuery)) ||
+                                item.author.toLowerCase().includes(searchQuery);
+            const matchCategory = selectedCategory === 'all' || item.category === selectedCategory;
+            return matchSearch && matchCategory;
+        });
+
+        if (filteredKeys.length === 0) {
+            grid.innerHTML = `<div style="grid-column: 1/-1; text-align:center; padding:50px; color:#888;">
+                등록된 링크가 없거나 검색 결과가 없습니다.
+            </div>`;
+            return;
+        }
+
+        filteredKeys.forEach(id => {
+            const item = archiveData[id];
+            const card = document.createElement('div');
+            card.className = 'file-card';
+            card.innerHTML = `
+                <div>
+                    <div class="card-header">
+                        <div class="file-name">📄 ${item.fileName}</div>
+                        <span class="category-badge">${item.category}</span>
+                    </div>
+
+                    <div class="file-info-box" style="margin-top: 12px;">
+                        <span>상태: <strong>외부 링크</strong></span>
+                        <a href="${item.downloadUrl}" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-icon">📥 열기/다운로드</a>
+                    </div>
+
+                    ${item.note ? `<div class="note-text" style="margin-top: 12px;">${item.note}</div>` : ''}
+                </div>
+
+                <div>
+                    <div class="meta-info">
+                        <span>작성자: <span class="author-badge">${item.author}</span></span>
+                        <span>${item.date}</span>
+                    </div>
+                    <div class="card-footer">
+                        <button class="btn btn-danger btn-icon" onclick="deleteFile('${id}')">🗑️ 삭제</button>
+                    </div>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    window.openUploadModal = openUploadModal;
+    window.closeModal = closeModal;
+    window.saveFileRecord = saveFileRecord;
+    window.deleteFile = deleteFile;
+    window.toggleCustomAuthorInput = toggleCustomAuthorInput;
+    window.renderFileGrid = renderFileGrid;
+</script>
+</body>
+</html>
