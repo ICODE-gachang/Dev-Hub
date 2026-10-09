@@ -489,7 +489,7 @@
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                             <h3>실시간 브레드보드 (Visual Breadboard)</h3>
                             <span style="font-size: 12px; color: var(--rpi-green); font-weight: bold;">
-                                원하는 구멍을 직접 클릭하여 핀 설정
+                                구멍을 직접 클릭하여 독립 설정
                             </span>
                         </div>
                         <div class="breadboard-wrapper">
@@ -544,29 +544,38 @@
     </div>
 </div>
 
-<!-- Pin Setting Modal (개선됨: GPIO 핀 선택 드롭다운 추가) -->
+<!-- Pin / Breadboard Setting Modal -->
 <div class="modal" id="pinModal">
     <div class="modal-content">
-        <h4 id="pinModalTitle">핀 설정</h4>
-        <div>
+        <h4 id="pinModalTitle">설정</h4>
+        
+        <!-- 40핀 전용 그룹 (브레드보드 단독 모드에서는 숨겨짐) -->
+        <div id="pinGpioGroup">
             <label>라즈베리파이 핀 (GPIO):</label>
             <select id="pinSelectDropdown" onchange="onPinDropdownChange(this.value)"></select>
         </div>
-        <div>
+
+        <!-- 공통: 점퍼 와이어 색상 -->
+        <div id="colorPickerGroup">
             <label>점퍼 와이어 색상:</label>
             <div class="color-picker" id="colorPicker"></div>
         </div>
-        <div>
+
+        <!-- 40핀 전용 그룹 (브레드보드 단독 모드에서는 숨겨짐) -->
+        <div id="pinBreadboardGroup">
             <label>브레드보드 위치 (좌표):</label>
             <div style="display:flex; gap:6px;">
                 <input type="text" id="pinBreadboardInput" placeholder="예: A15, +15, +2-10" onclick="startBreadboardSelection()" readonly style="cursor:pointer; background:#f9f9f9;">
                 <button type="button" class="btn btn-secondary" style="white-space:nowrap; font-size:12px;" onclick="startBreadboardSelection()">🎯 좌표 선택</button>
             </div>
         </div>
-        <div>
+
+        <!-- 공통: 연결 장치 / 신호 라벨 -->
+        <div id="labelInputGroup">
             <label>연결 장치 / 신호 라벨:</label>
-            <input type="text" id="pinLabelInput" placeholder="예: DHT11 Data, LED (+)">
+            <input type="text" id="pinLabelInput" placeholder="예: DHT11 Data, LED (+), 220Ω 저항">
         </div>
+
         <div style="display: flex; justify-content: flex-end; gap: 8px; margin-top: 10px;">
             <button class="btn btn-danger" onclick="clearPinData()">초기화</button>
             <button class="btn btn-primary" onclick="savePinData()">저장</button>
@@ -651,6 +660,8 @@
     let projects = {};
     let currentProjectId = null;
     let selectedPinNum = null;
+    let selectedBbPos = null;
+    let modalMode = 'gpio'; // 'gpio' | 'bb'
     let selectedColorHex = availableColors[0].hex;
     let isBreadboardVisible = false;
     let isSelectingBreadboardHole = false;
@@ -735,9 +746,10 @@
         document.getElementById('pinModal').style.display = 'flex';
     }
 
-    /* 🟢 브레드보드 구멍 클릭 핸들러 (개선됨) */
+    /* 🟢 브레드보드 구멍 클릭 핸들러 */
     function onBreadboardHoleClick(posKey) {
         if (isSelectingBreadboardHole) {
+            // 40핀 설정 도중 '좌표 선택'으로 클릭한 경우
             document.getElementById('pinBreadboardInput').value = posKey;
             
             isSelectingBreadboardHole = false;
@@ -758,38 +770,61 @@
                 input.style.borderColor = '';
             }, 600);
         } else {
-            // 브레드보드 구멍을 그냥 직접 클릭한 경우 모달 열기
-            openBreadboardHoleModal(posKey);
+            // 브레드보드 구멍을 그냥 직접 선택한 경우 -> 40핀과 연결 없이 독립 모달 호출
+            openBbModal(posKey);
         }
     }
 
-    /* 🟢 브레드보드 직접 클릭 시 핀 설정 모달 호출 */
-    function openBreadboardHoleModal(posKey) {
-        const currentPins = (projects[currentProjectId] && projects[currentProjectId].pins) || {};
-        const upperPos = posKey.toUpperCase().trim();
+    /* 🟢 브레드보드 전용 단독 모달 오픈 (색상, 라벨만 표시) */
+    function openBbModal(posKey) {
+        modalMode = 'bb';
+        selectedBbPos = posKey.toUpperCase().trim();
 
-        // 1. 이미 해당 좌표에 연결되어 있는 핀이 있는지 탐색
-        let existingPinNum = null;
-        Object.keys(currentPins).forEach(pinNum => {
-            if (currentPins[pinNum].breadboard && currentPins[pinNum].breadboard.toUpperCase().trim() === upperPos) {
-                existingPinNum = Number(pinNum);
-            }
-        });
+        document.getElementById('pinModalTitle').innerText = `브레드보드 [${selectedBbPos}] 설정`;
 
-        if (existingPinNum) {
-            // 이미 매핑된 핀이 있으면 해당 핀 모달 열기
-            openPinModal(existingPinNum);
+        // 40핀 및 브레드보드 좌표 입력란 숨김
+        document.getElementById('pinGpioGroup').style.display = 'none';
+        document.getElementById('pinBreadboardGroup').style.display = 'none';
+
+        const currentBbPins = (projects[currentProjectId] && projects[currentProjectId].bbPins) || {};
+        const existingData = currentBbPins[selectedBbPos];
+
+        document.getElementById('pinLabelInput').value = existingData ? existingData.label : '';
+        selectedColorHex = existingData ? existingData.color : availableColors[0].hex;
+        renderColorPicker();
+
+        document.getElementById('pinModal').style.display = 'flex';
+    }
+
+    /* 🟢 40핀 GPIO 헤더 클릭 시 모달 오픈 */
+    function openPinModal(pinNum, overrideBreadboardPos = null) {
+        modalMode = 'gpio';
+        selectedPinNum = Number(pinNum);
+
+        populatePinDropdown();
+        document.getElementById('pinSelectDropdown').value = selectedPinNum;
+
+        const pinDef = pinDefinitions.find(p => p.num === selectedPinNum);
+        const existingData = (projects[currentProjectId].pins) ? projects[currentProjectId].pins[selectedPinNum] : null;
+
+        document.getElementById('pinModalTitle').innerText = `Pin ${selectedPinNum} (${pinDef.name}) 설정`;
+
+        // 40핀 및 브레드보드 좌표 입력란 표시
+        document.getElementById('pinGpioGroup').style.display = 'block';
+        document.getElementById('pinBreadboardGroup').style.display = 'block';
+
+        document.getElementById('pinLabelInput').value = existingData ? existingData.label : '';
+
+        if (overrideBreadboardPos !== null) {
+            document.getElementById('pinBreadboardInput').value = overrideBreadboardPos;
         } else {
-            // 아직 연결되지 않은 구멍이면, 아직 사용 안 한 첫 번째 핀을 기본 선택으로 할당
-            let defaultPin = 1;
-            for (let i = 1; i <= 40; i++) {
-                if (!currentPins[i]) {
-                    defaultPin = i;
-                    break;
-                }
-            }
-            openPinModal(defaultPin, posKey);
+            document.getElementById('pinBreadboardInput').value = existingData ? (existingData.breadboard || '') : '';
         }
+        
+        selectedColorHex = existingData ? existingData.color : availableColors[0].hex;
+        renderColorPicker();
+
+        document.getElementById('pinModal').style.display = 'flex';
     }
 
     function renderProjectGrid() {
@@ -806,7 +841,8 @@
 
         keys.forEach(id => {
             const proj = projects[id];
-            const configuredPinsCount = Object.keys(proj.pins || {}).length;
+            const gpioCount = Object.keys(proj.pins || {}).length;
+            const bbCount = Object.keys(proj.bbPins || {}).length;
 
             const card = document.createElement('div');
             card.className = 'project-card';
@@ -820,7 +856,7 @@
                         ${proj.date}
                     </div>
                     <div class="project-meta" style="margin-top:8px;">
-                        연결된 핀: <b>${configuredPinsCount}개</b>
+                        연결된 노드: <b>GPIO ${gpioCount}개 / BB ${bbCount}개</b>
                     </div>
                 </div>
                 <div class="card-actions">
@@ -874,7 +910,8 @@
             title: title,
             author: author,
             date: getCurrentDateTime(),
-            pins: {}
+            pins: {},
+            bbPins: {}
         };
 
         saveToFirebase();
@@ -942,8 +979,11 @@
         table.innerHTML = '';
 
         const currentPins = (projects[currentProjectId] && projects[currentProjectId].pins) || {};
+        const currentBbPins = (projects[currentProjectId] && projects[currentProjectId].bbPins) || {};
         
         const holeMap = {};
+
+        // 1. 40핀 GPIO 연동 위치 매핑
         Object.keys(currentPins).forEach(pinNum => {
             const pData = currentPins[pinNum];
             if (pData.breadboard) {
@@ -951,9 +991,21 @@
                 holeMap[pos] = {
                     pinNum: pinNum,
                     color: pData.color,
-                    label: pData.label
+                    label: pData.label,
+                    type: 'gpio'
                 };
             }
+        });
+
+        // 2. 브레드보드 단독 위치 매핑
+        Object.keys(currentBbPins).forEach(pos => {
+            const bbData = currentBbPins[pos];
+            holeMap[pos] = {
+                pinNum: '•',
+                color: bbData.color,
+                label: bbData.label,
+                type: 'bb'
+            };
         });
 
         const rows = ['+', '-', 'A', 'B', 'C', 'D', 'E', 'divider', 'F', 'G', 'H', 'I', 'J', '+2', '-2'];
@@ -1002,7 +1054,11 @@
                         holeDiv.classList.add('active-wire');
                         holeDiv.style.backgroundColor = mapped.color;
                         holeDiv.innerText = mapped.pinNum;
-                        holeDiv.title = `Pin ${mapped.pinNum}: ${mapped.label} (${specificKey})`;
+                        if (mapped.type === 'gpio') {
+                            holeDiv.title = `Pin ${mapped.pinNum}: ${mapped.label} (${specificKey})`;
+                        } else {
+                            holeDiv.title = `브레드보드 (${specificKey}): ${mapped.label}`;
+                        }
                     }
 
                     holeDiv.onclick = () => onBreadboardHoleClick(specificKey);
@@ -1031,7 +1087,6 @@
         });
     }
 
-    /* 🟢 모달 드롭다운 목록 생성 */
     function populatePinDropdown() {
         const select = document.getElementById('pinSelectDropdown');
         if (!select) return;
@@ -1044,53 +1099,37 @@
         });
     }
 
-    /* 🟢 모달 내에서 핀 선택 변경 시 처리 */
     function onPinDropdownChange(newPinNum) {
         const currentBbPos = document.getElementById('pinBreadboardInput').value;
         openPinModal(Number(newPinNum), currentBbPos);
     }
 
-    /* 🟢 Pin 설정 모달 열기 (개선됨) */
-    function openPinModal(pinNum, overrideBreadboardPos = null) {
-        selectedPinNum = Number(pinNum);
-        populatePinDropdown();
-        
-        document.getElementById('pinSelectDropdown').value = selectedPinNum;
-
-        const pinDef = pinDefinitions.find(p => p.num === selectedPinNum);
-        const existingData = (projects[currentProjectId].pins) ? projects[currentProjectId].pins[selectedPinNum] : null;
-
-        document.getElementById('pinModalTitle').innerText = `Pin ${selectedPinNum} (${pinDef.name}) 설정`;
-        document.getElementById('pinLabelInput').value = existingData ? existingData.label : '';
-
-        if (overrideBreadboardPos !== null) {
-            document.getElementById('pinBreadboardInput').value = overrideBreadboardPos;
-        } else {
-            document.getElementById('pinBreadboardInput').value = existingData ? (existingData.breadboard || '') : '';
-        }
-        
-        selectedColorHex = existingData ? existingData.color : availableColors[0].hex;
-        renderColorPicker();
-
-        document.getElementById('pinModal').style.display = 'flex';
-    }
-
     function savePinData() {
-        const pinNum = Number(document.getElementById('pinSelectDropdown').value);
         const label = document.getElementById('pinLabelInput').value.trim();
-        const breadboard = document.getElementById('pinBreadboardInput').value.trim();
         
-        if (!projects[currentProjectId].pins) {
-            projects[currentProjectId].pins = {};
-        }
+        if (!projects[currentProjectId].pins) projects[currentProjectId].pins = {};
+        if (!projects[currentProjectId].bbPins) projects[currentProjectId].bbPins = {};
 
-        if (label || breadboard || selectedColorHex) {
-            projects[currentProjectId].pins[pinNum] = {
-                color: selectedColorHex,
-                breadboard: breadboard || '미지정',
-                label: label || '연결됨'
-            };
-            projects[currentProjectId].date = getCurrentDateTime();
+        if (modalMode === 'bb') {
+            if (label || selectedColorHex) {
+                projects[currentProjectId].bbPins[selectedBbPos] = {
+                    color: selectedColorHex,
+                    label: label || '연결됨'
+                };
+                projects[currentProjectId].date = getCurrentDateTime();
+            }
+        } else {
+            const pinNum = Number(document.getElementById('pinSelectDropdown').value);
+            const breadboard = document.getElementById('pinBreadboardInput').value.trim();
+
+            if (label || breadboard || selectedColorHex) {
+                projects[currentProjectId].pins[pinNum] = {
+                    color: selectedColorHex,
+                    breadboard: breadboard || '미지정',
+                    label: label || '연결됨'
+                };
+                projects[currentProjectId].date = getCurrentDateTime();
+            }
         }
 
         saveToFirebase();
@@ -1103,11 +1142,19 @@
     }
 
     function clearPinData() {
-        const pinNum = Number(document.getElementById('pinSelectDropdown').value);
-        if (projects[currentProjectId].pins && projects[currentProjectId].pins[pinNum]) {
-            delete projects[currentProjectId].pins[pinNum];
-            projects[currentProjectId].date = getCurrentDateTime();
-            saveToFirebase();
+        if (modalMode === 'bb') {
+            if (projects[currentProjectId].bbPins && projects[currentProjectId].bbPins[selectedBbPos]) {
+                delete projects[currentProjectId].bbPins[selectedBbPos];
+                projects[currentProjectId].date = getCurrentDateTime();
+                saveToFirebase();
+            }
+        } else {
+            const pinNum = Number(document.getElementById('pinSelectDropdown').value);
+            if (projects[currentProjectId].pins && projects[currentProjectId].pins[pinNum]) {
+                delete projects[currentProjectId].pins[pinNum];
+                projects[currentProjectId].date = getCurrentDateTime();
+                saveToFirebase();
+            }
         }
         closeModal('pinModal');
         
@@ -1122,13 +1169,17 @@
         tbody.innerHTML = '';
         
         const currentPins = (projects[currentProjectId] && projects[currentProjectId].pins) || {};
-        const pinKeys = Object.keys(currentPins).sort((a,b) => a - b);
+        const currentBbPins = (projects[currentProjectId] && projects[currentProjectId].bbPins) || {};
 
-        if (pinKeys.length === 0) {
+        const pinKeys = Object.keys(currentPins).sort((a,b) => a - b);
+        const bbKeys = Object.keys(currentBbPins).sort();
+
+        if (pinKeys.length === 0 && bbKeys.length === 0) {
             tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; color:#888;">설정된 핀이 없습니다.</td></tr>';
             return;
         }
 
+        // 1. 40핀 라즈베리파이 연결 목록
         pinKeys.forEach(pinNum => {
             const pinDef = pinDefinitions.find(p => p.num == pinNum);
             const data = currentPins[pinNum];
@@ -1140,6 +1191,22 @@
                 <td>${pinDef.name}</td>
                 <td><span class="color-badge" style="background-color: ${data.color}"></span>${colorObj.name}</td>
                 <td><span class="breadboard-tag">${data.breadboard || '-'}</span></td>
+                <td>${data.label}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+
+        // 2. 브레드보드 단독 연결 목록
+        bbKeys.forEach(pos => {
+            const data = currentBbPins[pos];
+            const colorObj = availableColors.find(c => c.hex === data.color) || { name: '지정 색상' };
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>-</b></td>
+                <td>브레드보드 단독</td>
+                <td><span class="color-badge" style="background-color: ${data.color}"></span>${colorObj.name}</td>
+                <td><span class="breadboard-tag">${pos}</span></td>
                 <td>${data.label}</td>
             `;
             tbody.appendChild(tr);
@@ -1197,6 +1264,7 @@
     window.deleteProject = deleteProject;
     window.openProject = openProject;
     window.openPinModal = openPinModal;
+    window.openBbModal = openBbModal;
     window.savePinData = savePinData;
     window.clearPinData = clearPinData;
     window.closeModal = closeModal;
@@ -1208,7 +1276,6 @@
     window.startBreadboardSelection = startBreadboardSelection;
     window.cancelBreadboardSelection = cancelBreadboardSelection;
     window.onPinDropdownChange = onPinDropdownChange;
-    window.openBreadboardHoleModal = openBreadboardHoleModal;
 
     renderColorPicker();
 </script>
